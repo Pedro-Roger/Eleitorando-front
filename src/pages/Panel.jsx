@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, getUser } from '../lib/api';
+import { api, getUser, assetUrl } from '../lib/api';
 import AppHeader from '../components/AppHeader';
 import Icon from '../components/Icon';
 
@@ -30,7 +30,7 @@ function CandidateIntentionList({ rows, withoutCandidate }) {
   return all.map((r) => (
     <div className="candidate-intention-row" key={r.candidateId}>
       <div className="avatar candidate-avatar small">
-        {r.photoUrl ? <img src={r.photoUrl} alt="" /> : r.party ? r.name.slice(0, 2).toUpperCase() : <Icon name="person_off" size={16} />}
+        {r.photoUrl ? <img src={assetUrl(r.photoUrl)} alt="" /> : r.party ? r.name.slice(0, 2).toUpperCase() : <Icon name="person_off" size={16} />}
       </div>
       <div className="candidate-intention-copy">
         <div className="bar-row" style={{ marginBottom: 0 }}>

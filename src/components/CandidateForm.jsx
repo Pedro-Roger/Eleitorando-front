@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import Icon from './Icon';
+import { assetUrl } from '../lib/api';
 
 // Formulário de cadastro/edição de candidato — usado apenas pelo administrador.
 // candidate: quando presente, pré-carrega os campos para edição.
@@ -9,7 +10,7 @@ export default function CandidateForm({ candidate, onSubmit, submitting, error }
   const [party, setParty] = useState(candidate?.party || '');
   const [active, setActive] = useState(candidate ? candidate.active : true);
   const [photoFile, setPhotoFile] = useState(null);
-  const [preview, setPreview] = useState(candidate?.photoUrl || null);
+  const [preview, setPreview] = useState(candidate?.photoUrl ? assetUrl(candidate.photoUrl) : null);
 
   function handlePhoto(e) {
     const file = e.target.files?.[0];

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { api, apiUpload, getUser } from '../lib/api';
+import { api, apiUpload, getUser, assetUrl } from '../lib/api';
 import AppHeader from '../components/AppHeader';
 import Icon from '../components/Icon';
 import BottomSheet from '../components/BottomSheet';
@@ -102,7 +102,7 @@ export default function Candidates() {
             <div className="card-row">
               <div className="card-leading">
                 <div className="avatar candidate-avatar">
-                  {c.photoUrl ? <img src={c.photoUrl} alt="" /> : c.name.slice(0, 2).toUpperCase()}
+                  {c.photoUrl ? <img src={assetUrl(c.photoUrl)} alt="" /> : c.name.slice(0, 2).toUpperCase()}
                 </div>
                 <div className="card-copy">
                   <div className="card-title">{c.name}</div>

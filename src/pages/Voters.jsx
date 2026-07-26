@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, getUser } from '../lib/api';
+import { api, getUser, assetUrl } from '../lib/api';
 import BottomSheet from '../components/BottomSheet';
 import ConfirmDialog from '../components/ConfirmDialog';
 import VoterForm from '../components/VoterForm';
@@ -154,7 +154,7 @@ export default function Voters() {
             {v.candidate && (
               <div className="voter-candidate">
                 <div className="avatar candidate-avatar small">
-                  {v.candidate.photoUrl ? <img src={v.candidate.photoUrl} alt="" /> : v.candidate.name.slice(0, 2).toUpperCase()}
+                  {v.candidate.photoUrl ? <img src={assetUrl(v.candidate.photoUrl)} alt="" /> : v.candidate.name.slice(0, 2).toUpperCase()}
                 </div>
                 <span><Icon name="how_to_vote" size={14} /> Intenção: <b>{v.candidate.name}</b> ({v.candidate.party})</span>
               </div>

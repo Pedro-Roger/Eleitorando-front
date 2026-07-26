@@ -1,4 +1,15 @@
-const BASE = '/api';
+// Em desenvolvimento, usamos "/api" (o Vite reescreve e encaminha para a API local).
+// Em produção, defina VITE_API_URL com a URL completa da API (ex.: http://192.99.208.37:3333)
+// antes de rodar "npm run build" — sem isso, o build de produção não sabe onde está a API.
+const API_ORIGIN = import.meta.env.VITE_API_URL || '';
+const BASE = API_ORIGIN || '/api';
+
+// Monta a URL completa de um arquivo servido pela API (ex.: foto de candidato em /uploads/...).
+// Em dev, o caminho relativo já funciona graças ao proxy do Vite; em produção, precisa do domínio da API.
+export function assetUrl(path) {
+  if (!path) return path;
+  return API_ORIGIN ? `${API_ORIGIN}${path}` : path;
+}
 
 export function getToken() {
   return localStorage.getItem('token');
