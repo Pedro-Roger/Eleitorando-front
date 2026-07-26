@@ -141,15 +141,6 @@ export default function Home() {
                 );
               })}
             </div>
-            <Link className="link-card" to="/candidatos">
-              <div className="card tappable card-row">
-                <div className="card-leading">
-                  <div className="avatar"><Icon name="how_to_vote" size={18} /></div>
-                  <div><div className="card-title">Candidatos</div><div className="meta">Referência de intenção de voto</div></div>
-                </div>
-                <Icon name="chevron_right" />
-              </div>
-            </Link>
           </>
         )}
 

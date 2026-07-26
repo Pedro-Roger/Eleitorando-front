@@ -10,8 +10,6 @@ import CandidateForm from '../components/CandidateForm';
 export default function Candidates() {
   const me = getUser();
   const isAdmin = me?.role === 'ADMIN';
-  const isCabo = me?.role === 'CABO';
-  const canManage = isAdmin || isCabo;
 
   const [candidates, setCandidates] = useState([]);
   const [error, setError] = useState('');
@@ -32,10 +30,10 @@ export default function Candidates() {
     }
   }
   useEffect(() => {
-    if (canManage) load();
-  }, [canManage]);
+    if (isAdmin) load();
+  }, [isAdmin]);
 
-  if (!canManage) return <Navigate to="/" replace />;
+  if (!isAdmin) return <Navigate to="/" replace />;
 
   async function handleCreate(formData) {
     setSaving(true);
