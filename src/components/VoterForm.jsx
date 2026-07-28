@@ -6,7 +6,7 @@ const GENDERS = ['Feminino', 'Masculino', 'Outro', 'Prefere não informar'];
 
 // Formulário de cadastro/edição de eleitor — reutilizado tanto no "Novo Eleitor"
 // quanto na edição de um eleitor já existente (initial preenchido).
-export default function VoterForm({ initial, candidates = [], onSubmit, submitting, error, submitLabel = 'Salvar Cadastro' }) {
+export default function VoterForm({ initial, onSubmit, submitting, error, submitLabel = 'Salvar Cadastro' }) {
   const [form, setForm] = useState({
     name: initial?.name || '',
     phone: initial?.phone || '',
@@ -17,7 +17,6 @@ export default function VoterForm({ initial, candidates = [], onSubmit, submitti
     age: initial?.age ?? '',
     zone: initial?.zone || '',
     section: initial?.section || '',
-    candidateId: initial?.candidate?.id ? String(initial.candidate.id) : '',
     notes: initial?.notes || '',
   });
 
@@ -107,15 +106,6 @@ export default function VoterForm({ initial, candidates = [], onSubmit, submitti
       </div>
 
       <h3 className="form-section-title">Detalhes Adicionais</h3>
-      <div className="field">
-        <label>Candidato — intenção de voto</label>
-        <select value={form.candidateId} onChange={(e) => setForm({ ...form, candidateId: e.target.value })}>
-          <option value="">Não informado</option>
-          {candidates.map((c) => (
-            <option key={c.id} value={c.id}>{c.name} ({c.party})</option>
-          ))}
-        </select>
-      </div>
       <div className="field">
         <label>Observações</label>
         <textarea

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, getUser, assetUrl } from '../lib/api';
+import { api, getUser } from '../lib/api';
 import BottomSheet from '../components/BottomSheet';
 import ConfirmDialog from '../components/ConfirmDialog';
 import VoterForm from '../components/VoterForm';
@@ -30,12 +30,7 @@ export default function Voters() {
   const [editError, setEditError] = useState('');
   const [toDelete, setToDelete] = useState(null);
 
-  const [candidates, setCandidates] = useState([]);
   const loadRequest = useRef(0);
-
-  useEffect(() => {
-    api('/candidates').then((d) => setCandidates(d.candidates.filter((c) => c.active))).catch(() => {});
-  }, []);
 
   async function load(q = '') {
     const requestId = ++loadRequest.current;
@@ -151,14 +146,6 @@ export default function Voters() {
               {v.phone && <span className="chip"><Icon name="call" size={12} />{v.phone}</span>}
               {v.age != null && <span className="chip">{v.age} anos</span>}
             </div>
-            {v.candidate && (
-              <div className="voter-candidate">
-                <div className="avatar candidate-avatar small">
-                  {v.candidate.photoUrl ? <img src={assetUrl(v.candidate.photoUrl)} alt="" /> : v.candidate.name.slice(0, 2).toUpperCase()}
-                </div>
-                <span><Icon name="how_to_vote" size={14} /> Intenção: <b>{v.candidate.name}</b> ({v.candidate.party})</span>
-              </div>
-            )}
             <div className="card-footer meta">
               <Icon name="person" size={14} /> Cadastrado por: {me?.role !== 'SUBCABO' ? v.createdBy?.name : 'você'}
             </div>
@@ -175,7 +162,7 @@ export default function Voters() {
       </button>
 
       <BottomSheet open={open} onClose={() => setOpen(false)} title="Novo Eleitor">
-        <VoterForm candidates={candidates} onSubmit={handleCreate} submitting={saving} error={formError} submitLabel="Salvar Cadastro" />
+        <VoterForm onSubmit={handleCreate} submitting={saving} error={formError} submitLabel="Salvar Cadastro" />
       </BottomSheet>
 
       {/* Menu de ações do cartão — Editar / Excluir */}
@@ -215,7 +202,6 @@ export default function Voters() {
           <VoterForm
             key={editTarget.id}
             initial={editTarget}
-            candidates={candidates}
             onSubmit={handleEditSubmit}
             submitting={editSaving}
             error={editError}
