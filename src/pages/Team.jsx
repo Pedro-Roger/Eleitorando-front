@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, getUser } from '../lib/api';
 import BottomSheet from '../components/BottomSheet';
+import ConfirmDialog from '../components/ConfirmDialog';
 import UserForm from '../components/UserForm';
 import StateCitySelect from '../components/StateCitySelect';
 import AppHeader from '../components/AppHeader';
@@ -32,6 +33,13 @@ export default function Team() {
   const [resetPw, setResetPw] = useState('');
   const [resetDone, setResetDone] = useState(null);
   const [actionError, setActionError] = useState('');
+  const [toDelete, setToDelete] = useState(null);
+  const [success, setSuccess] = useState('');
+
+  function flash(msg) {
+    setSuccess(msg);
+    setTimeout(() => setSuccess(''), 3500);
+  }
 
   async function load() {
     try {
@@ -97,6 +105,20 @@ export default function Team() {
     }
   }
 
+  async function handleDelete() {
+    try {
+      const data = await api(`/users/${toDelete.user.id}`, { method: 'DELETE' });
+      setToDelete(null);
+      setDetail(null);
+      flash(data.message);
+      load();
+    } catch (e) {
+      setToDelete(null);
+      setError(e.message);
+      setTimeout(() => setError(''), 3500);
+    }
+  }
+
   async function handleReset(e) {
     e.preventDefault();
     setActionError('');
@@ -121,6 +143,7 @@ export default function Team() {
       <AppHeader title="Equipe" subtitle="Gestão de Lideranças" />
       <div className="page" style={{ paddingBottom: 104 }}>
         {error && <div className="alert error">{error}</div>}
+        {success && <div className="alert success">{success}</div>}
 
         <div className="field search-field">
           <div className="input-icon">
@@ -325,6 +348,11 @@ export default function Team() {
                 {detail.user.active ? 'Desativar conta' : 'Ativar conta'}
               </button>
             </div>
+            <div style={{ marginTop: 10 }}>
+              <button className="btn danger-outline" onClick={() => setToDelete(detail)}>
+                Excluir {detail.user.role === 'CABO' ? 'cabo eleitoral' : 'subcabo'}
+              </button>
+            </div>
           </>
         )}
       </BottomSheet>
@@ -397,6 +425,23 @@ export default function Team() {
           </>
         )}
       </BottomSheet>
+
+      <ConfirmDialog
+        open={!!toDelete}
+        onClose={() => setToDelete(null)}
+        onConfirm={handleDelete}
+        title={`Excluir ${toDelete?.user?.role === 'CABO' ? 'cabo eleitoral' : 'subcabo'}?`}
+        description={
+          <>
+            <b>{toDelete?.user?.name}</b> será removido da equipe e não conseguirá mais acessar o sistema.
+            {toDelete?.subcabos?.length > 0 && (
+              <> Os {toDelete.subcabos.length} subcabo{toDelete.subcabos.length === 1 ? '' : 's'} vinculado{toDelete.subcabos.length === 1 ? '' : 's'} a ele{' '}
+              continuar{toDelete.subcabos.length === 1 ? 'á' : 'ão'} ativo{toDelete.subcabos.length === 1 ? '' : 's'}, mas sem esse cabo responsável visível.</>
+            )}
+            {' '}Os eleitores já cadastrados por essa pessoa não são apagados.
+          </>
+        }
+      />
     </>
   );
 }
