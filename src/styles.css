@@ -682,9 +682,12 @@ a { color: inherit; }
   .app-shell.tall-header { padding-top: 136px; }
   .app-header { min-height: 72px; padding-inline: 32px; grid-template-columns: 48px 1fr 48px; }
   .app-header-logo { height: 128px; }
-  .page { width: min(100%, 1180px); padding: 32px; }
+  /* Páginas de coluna única (a maioria) ficam numa largura de leitura confortável;
+     só a Home (que tem .dashboard-grid) usa o container largo abaixo. */
+  .page { width: min(100%, 720px); padding: 32px; }
+  .page:has(.dashboard-grid) { width: min(100%, 1180px); }
   .tabbar { left: 50%; width: min(100% - 32px, 620px); transform: translateX(-50%); bottom: 16px; border: 1px solid var(--outline-variant); border-radius: 18px; box-shadow: 0 8px 30px rgba(25, 27, 35, .12); overflow: hidden; }
-  .fab { right: max(32px, calc((100vw - 1180px) / 2 + 32px)); bottom: 96px; }
+  .fab { right: max(32px, calc((100vw - 720px) / 2 + 32px)); bottom: 96px; }
   .dashboard-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: 16px; align-items: start; }
   .dashboard-grid .stats-grid { grid-template-columns: repeat(4, 1fr); }
 }
