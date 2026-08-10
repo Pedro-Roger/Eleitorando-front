@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api, getUser } from '../lib/api';
 import BottomSheet from '../components/BottomSheet';
 import ConfirmDialog from '../components/ConfirmDialog';
+import AlertDialog from '../components/AlertDialog';
 import VoterForm from '../components/VoterForm';
 import AppHeader from '../components/AppHeader';
 import Icon from '../components/Icon';
@@ -29,6 +30,7 @@ export default function Voters() {
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState('');
   const [toDelete, setToDelete] = useState(null);
+  const [dupPhone, setDupPhone] = useState(false);
 
   const loadRequest = useRef(0);
 
@@ -63,7 +65,8 @@ export default function Voters() {
       flash(data.message);
       load(search);
     } catch (err) {
-      setFormError(err.message);
+      if (err.status === 409) setDupPhone(true);
+      else setFormError(err.message);
     } finally {
       setSaving(false);
     }
@@ -78,7 +81,8 @@ export default function Voters() {
       flash(data.message);
       load(search);
     } catch (err) {
-      setEditError(err.message);
+      if (err.status === 409) setDupPhone(true);
+      else setEditError(err.message);
     } finally {
       setEditSaving(false);
     }
@@ -209,6 +213,13 @@ export default function Voters() {
           />
         )}
       </BottomSheet>
+
+      <AlertDialog
+        open={dupPhone}
+        onClose={() => setDupPhone(false)}
+        title="Telefone já cadastrado"
+        description="Já existe um eleitor cadastrado com este número de telefone. Verifique o número ou procure o eleitor na busca."
+      />
 
       <ConfirmDialog
         open={!!toDelete}

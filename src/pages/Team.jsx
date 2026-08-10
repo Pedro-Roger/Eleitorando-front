@@ -277,6 +277,11 @@ export default function Team() {
             </div>
             <div className="card">
               <div className="meta">📍 Atuação: {detail.user.city}/{detail.user.state}{detail.user.neighborhood ? ` · ${detail.user.neighborhood}` : ''}</div>
+              {(detail.user.zone || detail.user.section) && (
+                <div className="meta">
+                  🗳️ {detail.user.zone ? `Zona ${detail.user.zone}` : ''}{detail.user.zone && detail.user.section ? ' · ' : ''}{detail.user.section ? `Seção ${detail.user.section}` : ''}
+                </div>
+              )}
               <div className="meta">👤 Usuário: {detail.user.username}</div>
               {detail.user.phone && <div className="meta">📞 {detail.user.phone}</div>}
               {detail.parent && <div className="meta">🧭 Cabo responsável: {detail.parent.name}</div>}
@@ -330,6 +335,8 @@ export default function Team() {
                     state: detail.user.state,
                     city: detail.user.city,
                     neighborhood: detail.user.neighborhood || '',
+                    zone: detail.user.zone || '',
+                    section: detail.user.section || '',
                   });
                   setEditUser(detail.user);
                 }}
@@ -382,6 +389,26 @@ export default function Team() {
                 onChange={(e) => setEditForm({ ...editForm, neighborhood: e.target.value })}
                 placeholder="Opcional"
               />
+            </div>
+            <div className="row-actions" style={{ marginTop: 0 }}>
+              <div className="field" style={{ flex: 1 }}>
+                <label>Zona eleitoral</label>
+                <input
+                  inputMode="numeric"
+                  value={editForm.zone}
+                  onChange={(e) => setEditForm({ ...editForm, zone: e.target.value })}
+                  placeholder="Ex.: 012"
+                />
+              </div>
+              <div className="field" style={{ flex: 1 }}>
+                <label>Seção</label>
+                <input
+                  inputMode="numeric"
+                  value={editForm.section}
+                  onChange={(e) => setEditForm({ ...editForm, section: e.target.value })}
+                  placeholder="Ex.: 0345"
+                />
+              </div>
             </div>
             <button className="btn" disabled={!editForm.name.trim() || !editForm.state || !editForm.city}>
               Salvar alterações

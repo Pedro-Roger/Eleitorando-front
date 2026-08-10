@@ -14,6 +14,7 @@ import Candidates from './pages/Candidates';
 import Reports from './pages/Reports';
 import Activities from './pages/Activities';
 import Settings from './pages/Settings';
+import Export from './pages/Export';
 
 function Protected({ children }) {
   if (!getToken()) return <Navigate to="/login" replace />;
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="/relatorios" element={<Protected><Reports /></Protected>} />
         <Route path="/atividades" element={<Protected><Activities /></Protected>} />
         <Route path="/configuracoes" element={<Protected><Settings /></Protected>} />
+        <Route path="/exportar" element={<Protected><Export /></Protected>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       {!hideTabs && getToken() && <TabBar role={user?.role} />}

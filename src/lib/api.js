@@ -50,8 +50,32 @@ export async function api(path, options = {}) {
     window.location.href = '/trocar-senha';
     throw new Error(data.error || 'Troque sua senha inicial.');
   }
-  if (!res.ok) throw new Error(data.error || 'Erro inesperado.');
+  if (!res.ok) {
+    const err = new Error(data.error || 'Erro inesperado.');
+    err.status = res.status;
+    throw err;
+  }
   return data;
+}
+
+// Baixa um arquivo autenticado gerado pela API (exportações) e dispara o download no navegador.
+export async function apiDownload(path) {
+  const res = await fetch(BASE + path, {
+    headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {},
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Erro ao gerar o arquivo.');
+  }
+  const blob = await res.blob();
+  const match = (res.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = match ? match[1] : 'exportacao';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(a.href);
 }
 
 // Envio multipart (usado no cadastro/edição de candidato com foto).

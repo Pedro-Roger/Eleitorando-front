@@ -15,6 +15,8 @@ export default function UserForm({ role, cabos = [], onSubmit, submitting, error
     state: 'CE',
     city: '',
     neighborhood: '',
+    zone: '',
+    section: '',
     active: true,
     parentId: '',
   });
@@ -117,6 +119,27 @@ export default function UserForm({ role, cabos = [], onSubmit, submitting, error
           onChange={(e) => set('neighborhood', e.target.value)}
           placeholder="Opcional"
         />
+      </div>
+
+      <div className="row-actions" style={{ marginTop: 0 }}>
+        <div className="field" style={{ flex: 1 }}>
+          <label>Zona eleitoral</label>
+          <input
+            inputMode="numeric"
+            value={form.zone}
+            onChange={(e) => set('zone', e.target.value)}
+            placeholder="Ex.: 012"
+          />
+        </div>
+        <div className="field" style={{ flex: 1 }}>
+          <label>Seção</label>
+          <input
+            inputMode="numeric"
+            value={form.section}
+            onChange={(e) => set('section', e.target.value)}
+            placeholder="Ex.: 0345"
+          />
+        </div>
       </div>
 
       <div className="switch-row">

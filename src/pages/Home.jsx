@@ -83,6 +83,15 @@ export default function Home() {
                   <Icon name="chevron_right" />
                 </div>
               </Link>
+              <Link className="link-card" to="/exportar">
+                <div className="card tappable card-row">
+                  <div className="card-leading">
+                    <div className="avatar"><Icon name="ios_share" size={18} /></div>
+                    <div><div className="card-title">Exportar dados</div><div className="meta">Compartilhar eleitores em XLS, CSV, PDF</div></div>
+                  </div>
+                  <Icon name="chevron_right" />
+                </div>
+              </Link>
               <Link className="link-card" to="/configuracoes">
                 <div className="card tappable card-row">
                   <div className="card-leading">

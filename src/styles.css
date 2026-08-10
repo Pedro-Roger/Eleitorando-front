@@ -294,7 +294,7 @@ a { color: inherit; }
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 18%, transparent);
 }
 .field input:disabled, .field select:disabled { background: var(--surface-low); color: var(--muted); }
-.field .hint { color: var(--muted); font-size: 11px; line-height: 15px; margin-top: 4px; }
+.hint { color: var(--muted); font-size: 11px; line-height: 15px; margin-top: 4px; }
 .input-icon { position: relative; }
 .input-icon > .material-symbols-outlined {
   position: absolute;
@@ -620,6 +620,9 @@ a { color: inherit; }
 .password-box { margin: 12px 0; padding: 14px; border: 1px dashed var(--primary); border-radius: 8px; background: var(--surface-low); color: var(--primary); text-align: center; font: 700 18px/24px ui-monospace, monospace; letter-spacing: .06em; user-select: all; }
 .row-actions { display: flex; gap: 10px; margin-top: 12px; }
 .row-actions .btn { flex: 1; }
+
+.check-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; cursor: pointer; font-size: 14px; }
+.check-row input[type="checkbox"] { width: 18px; height: 18px; flex: 0 0 auto; accent-color: var(--primary); }
 
 .switch-row { padding: 12px 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 14px; font-weight: 600; }
 .switch { position: relative; width: 48px; height: 28px; flex: 0 0 auto; }
