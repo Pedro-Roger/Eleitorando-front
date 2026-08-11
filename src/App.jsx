@@ -31,7 +31,10 @@ export default function App() {
   return (
     <div className={`app-shell ${hideTabs ? 'auth-shell' : ''} ${isBrandHeader ? 'tall-header' : ''}`}>
       {booting && <SplashScreen onDone={() => setBooting(false)} />}
-      <Routes>
+      {/* A rolagem acontece neste contêiner (e não no body): evita o bug do iOS Safari
+          em que elementos position:fixed "flutuam" quando a altura da tela muda
+          (ligação ativa, teclado aberto, barra do navegador recolhendo). */}
+      <main className="app-scroll"><Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/trocar-senha" element={<ChangePassword />} />
         <Route path="/" element={<Protected><Home /></Protected>} />
@@ -45,7 +48,7 @@ export default function App() {
         <Route path="/configuracoes" element={<Protected><Settings /></Protected>} />
         <Route path="/exportar" element={<Protected><Export /></Protected>} />
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      </Routes></main>
       {!hideTabs && getToken() && <TabBar role={user?.role} />}
     </div>
   );

@@ -63,18 +63,26 @@ a { color: inherit; }
   user-select: none;
 }
 
+/* O shell ocupa a tela inteira e NÃO rola; a rolagem fica no .app-scroll.
+   Assim header e menu ficam no fluxo normal (sticky/flex) em vez de position:fixed,
+   imune ao bug do iOS Safari de barras fixas flutuando quando a altura da tela muda. */
 .app-shell {
-  min-height: 100dvh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: var(--background);
-  padding-top: calc(64px + var(--safe-top));
-  padding-bottom: calc(72px + var(--safe-bottom));
 }
-.app-shell.auth-shell { padding: 0; }
-.app-shell.tall-header { padding-top: calc(112px + var(--safe-top)); }
+.app-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
 
 .app-header {
-  position: fixed;
-  inset: 0 0 auto;
+  position: sticky;
+  top: 0;
   z-index: 40;
   min-height: calc(64px + var(--safe-top));
   padding: var(--safe-top) 16px 0;
@@ -166,8 +174,7 @@ a { color: inherit; }
 .page-intro p { color: var(--muted); font-size: 14px; margin-top: 0; }
 
 .tabbar {
-  position: fixed;
-  inset: auto 0 0;
+  flex: none;
   z-index: 45;
   min-height: calc(56px + var(--safe-bottom));
   padding: 0 4px var(--safe-bottom);
@@ -728,15 +735,13 @@ button.stat { font: inherit; text-align: left; cursor: pointer; width: 100%; }
 @keyframes splash-logo-in { from { opacity: 0; transform: scale(.8); } }
 
 @media (min-width: 768px) {
-  .app-shell { padding-top: 72px; }
-  .app-shell.tall-header { padding-top: 136px; }
   .app-header { min-height: 72px; padding-inline: 32px; grid-template-columns: 48px 1fr 48px; }
   .app-header-logo { height: 128px; }
   /* Páginas de coluna única (a maioria) ficam numa largura de leitura confortável;
      só a Home (que tem .dashboard-grid) usa o container largo abaixo. */
   .page { width: min(100%, 720px); padding: 32px; }
   .page:has(.dashboard-grid) { width: min(100%, 1180px); }
-  .tabbar { left: 50%; width: min(100% - 32px, 620px); transform: translateX(-50%); bottom: 16px; border: 1px solid var(--outline-variant); border-radius: 18px; box-shadow: 0 8px 30px rgba(25, 27, 35, .12); overflow: hidden; }
+  .tabbar { width: min(100% - 32px, 620px); margin: 0 auto 16px; border: 1px solid var(--outline-variant); border-radius: 18px; box-shadow: 0 8px 30px rgba(25, 27, 35, .12); overflow: hidden; }
   .fab { right: max(32px, calc((100vw - 720px) / 2 + 32px)); bottom: 96px; }
   .dashboard-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: 16px; align-items: start; }
   .dashboard-grid .stats-grid { grid-template-columns: repeat(4, 1fr); }
