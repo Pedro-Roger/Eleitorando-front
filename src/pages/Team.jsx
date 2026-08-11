@@ -208,16 +208,16 @@ export default function Team() {
         ))}
       </div>
 
-      {/* Botão fixo de criação — somente o admin cria cabos e subcabos */}
-      {isAdmin && (
+      {/* Botão fixo de criação — admin cria cabos e subcabos; cabo cria os próprios subcabos */}
+      {(isAdmin || me?.role === 'CABO') && (
         <button
           className="btn fab"
           onClick={() => {
             setCreateError('');
-            setCreateRole(tab === 'subcabos' ? 'SUBCABO' : 'CABO');
+            setCreateRole(isAdmin && tab !== 'subcabos' ? 'CABO' : 'SUBCABO');
             setCreateOpen(true);
           }}
-          aria-label={tab === 'subcabos' ? 'Criar subcabo' : 'Criar cabo eleitoral'}
+          aria-label={isAdmin && tab !== 'subcabos' ? 'Criar cabo eleitoral' : 'Criar subcabo'}
         >
           <Icon name="add" size={28} />
         </button>
@@ -236,6 +236,7 @@ export default function Team() {
           onSubmit={handleCreate}
           submitting={creating}
           error={createError}
+          hideParent={!isAdmin}
         />
       </BottomSheet>
 

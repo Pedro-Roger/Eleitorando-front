@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import StateCitySelect from './StateCitySelect';
 
-// Formulário de criação de cabo/subcabo — usado apenas pelo administrador.
+// Formulário de criação de cabo/subcabo.
 // role: 'CABO' | 'SUBCABO'
 // cabos: lista de cabos para escolher o responsável (obrigatório quando role = SUBCABO)
-export default function UserForm({ role, cabos = [], onSubmit, submitting, error }) {
+// hideParent: usado quando quem cria é um cabo — o subcabo fica vinculado a ele automaticamente
+export default function UserForm({ role, cabos = [], onSubmit, submitting, error, hideParent = false }) {
   const isSubcabo = role === 'SUBCABO';
   const [form, setForm] = useState({
     name: '',
@@ -29,7 +30,7 @@ export default function UserForm({ role, cabos = [], onSubmit, submitting, error
     form.confirmPassword &&
     form.state &&
     form.city &&
-    (!isSubcabo || form.parentId);
+    (!isSubcabo || hideParent || form.parentId);
 
   return (
     <form
@@ -40,7 +41,7 @@ export default function UserForm({ role, cabos = [], onSubmit, submitting, error
     >
       {error && <div className="alert error">{error}</div>}
 
-      {isSubcabo && (
+      {isSubcabo && !hideParent && (
         <div className="field">
           <label>
             Cabo responsável <span className="req">*</span>
