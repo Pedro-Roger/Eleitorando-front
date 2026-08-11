@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, getUser } from '../lib/api';
 import BottomSheet from '../components/BottomSheet';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -9,8 +9,7 @@ import Icon from '../components/Icon';
 import { avatarColor } from '../lib/avatar';
 
 function locationLine(v) {
-  const place = v.neighborhood || v.city;
-  return v.section ? `${place} • Sec. ${v.section}` : place;
+  return v.neighborhood || v.city;
 }
 
 export default function Voters() {
@@ -32,12 +31,50 @@ export default function Voters() {
   const [toDelete, setToDelete] = useState(null);
   const [dupPhone, setDupPhone] = useState(false);
 
+  // Filtro por equipe: admin filtra por cabo e subcabo; cabo filtra pelos próprios subcabos
+  const [caboFilter, setCaboFilter] = useState('');
+  const [subFilter, setSubFilter] = useState('');
+  const [cabosTree, setCabosTree] = useState([]); // admin: cabos com subcabos
+  const [mySubs, setMySubs] = useState([]); // cabo: seus subcabos
+
+  useEffect(() => {
+    if (me?.role === 'ADMIN') api('/export/options').then((d) => setCabosTree(d.cabos)).catch(() => {});
+    else if (me?.role === 'CABO') api('/users').then((d) => setMySubs(d.users)).catch(() => {});
+  }, []);
+
+  // Subcabos exibidos no filtro do admin: todos, ou só os do cabo escolhido
+  const adminSubOptions = useMemo(() => {
+    const cabos = caboFilter ? cabosTree.filter((c) => c.id === Number(caboFilter)) : cabosTree;
+    return cabos.flatMap((c) => c.subcabos.map((s) => ({ ...s, caboName: c.name })));
+  }, [cabosTree, caboFilter]);
+
+  // Lista final de cadastradores para o filtro (vazia = sem filtro)
+  const teamIds = useMemo(() => {
+    if (me?.role === 'ADMIN') {
+      if (subFilter) return [Number(subFilter)];
+      if (caboFilter) {
+        const cabo = cabosTree.find((c) => c.id === Number(caboFilter));
+        return cabo ? [cabo.id, ...cabo.subcabos.map((s) => s.id)] : [];
+      }
+      return [];
+    }
+    if (me?.role === 'CABO') {
+      if (subFilter === 'me') return [me.id];
+      if (subFilter) return [Number(subFilter)];
+    }
+    return [];
+  }, [me?.role, me?.id, caboFilter, subFilter, cabosTree]);
+
   const loadRequest = useRef(0);
 
-  async function load(q = '') {
+  async function load(q = '', ids = teamIds) {
     const requestId = ++loadRequest.current;
     try {
-      const data = await api(`/voters${q ? `?search=${encodeURIComponent(q)}` : ''}`);
+      const p = new URLSearchParams();
+      if (q) p.set('search', q);
+      if (ids.length) p.set('createdByIds', ids.join(','));
+      const qs = p.toString();
+      const data = await api(`/voters${qs ? `?${qs}` : ''}`);
       if (requestId !== loadRequest.current) return;
       setVoters(data.voters);
       setTotal(data.total);
@@ -49,7 +86,7 @@ export default function Voters() {
   useEffect(() => {
     const timer = window.setTimeout(() => load(search), 250);
     return () => window.clearTimeout(timer);
-  }, [search]);
+  }, [search, teamIds]);
 
   function flash(msg) {
     setSuccess(msg);
@@ -119,6 +156,36 @@ export default function Voters() {
           </div>
         </div>
 
+        {me?.role === 'ADMIN' && cabosTree.length > 0 && (
+          <div className="row-actions" style={{ marginTop: 0, marginBottom: 4 }}>
+            <div className="field" style={{ flex: 1 }}>
+              <label>Cabo</label>
+              <select value={caboFilter} onChange={(e) => { setCaboFilter(e.target.value); setSubFilter(''); }}>
+                <option value="">Todos</option>
+                {cabosTree.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div className="field" style={{ flex: 1 }}>
+              <label>Subcabo</label>
+              <select value={subFilter} onChange={(e) => setSubFilter(e.target.value)}>
+                <option value="">Todos</option>
+                {adminSubOptions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+          </div>
+        )}
+
+        {me?.role === 'CABO' && mySubs.length > 0 && (
+          <div className="field">
+            <label>Filtrar por membro da equipe</label>
+            <select value={subFilter} onChange={(e) => setSubFilter(e.target.value)}>
+              <option value="">Toda a equipe</option>
+              <option value="me">Meus cadastros</option>
+              {mySubs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </div>
+        )}
+
         {voters.length === 0 && (
           <div className="empty">
             <Icon name="person_search" size={36} />
@@ -149,6 +216,14 @@ export default function Voters() {
             <div className="chip-row">
               {v.phone && <span className="chip"><Icon name="call" size={12} />{v.phone}</span>}
               {v.age != null && <span className="chip">{v.age} anos</span>}
+              {v.zone && <span className="chip primary"><Icon name="how_to_vote" size={12} />Zona {v.zone}</span>}
+              {v.section && <span className="chip primary"><Icon name="pin" size={12} />Seção {v.section}</span>}
+              {(!v.zone || !v.section) && (
+                <span className="chip warn">
+                  <Icon name="error" size={12} />
+                  {!v.zone && !v.section ? 'Sem zona e seção' : !v.zone ? 'Sem zona' : 'Sem seção'}
+                </span>
+              )}
             </div>
             <div className="card-footer meta">
               <Icon name="person" size={14} /> Cadastrado por: {me?.role !== 'SUBCABO' ? v.createdBy?.name : 'você'}

@@ -244,6 +244,7 @@ a { color: inherit; }
   line-height: 14px;
 }
 .chip.primary { background: var(--primary-container); color: var(--on-primary); }
+.chip.warn { background: #FEF3C7; color: #92400E; }
 .chip b { color: inherit; font-weight: 700; }
 
 .stats-grid {
