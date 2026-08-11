@@ -274,6 +274,42 @@ a.stat {
 a.stat:hover { background: color-mix(in srgb, var(--surface-lowest) 88%, var(--surface-low)); }
 a.stat:active { transform: scale(.99); }
 button.stat { font: inherit; text-align: left; cursor: pointer; width: 100%; }
+
+/* Pódio do ranking da equipe */
+.podium {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 16px 12px 0;
+  background: var(--surface-lowest);
+  border: 1px solid var(--outline-variant);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.podium-step { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.podium-medal { font-size: 24px; line-height: 1.2; }
+.podium-name { font-weight: 700; font-size: 12px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.podium-count { color: var(--muted); font-size: 11px; }
+.podium-bar {
+  width: 100%;
+  margin-top: 5px;
+  border-radius: 10px 10px 0 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 8px;
+  color: #fff;
+  font-weight: 800;
+  font-size: 15px;
+}
+.podium-1 .podium-bar { height: 84px; background: linear-gradient(180deg, #F5B301, #D98E04); }
+.podium-2 .podium-bar { height: 60px; background: linear-gradient(180deg, #9AA7B5, #64748B); }
+.podium-3 .podium-bar { height: 44px; background: linear-gradient(180deg, #CD8A55, #A05A2C); }
+.rank-row { display: flex; align-items: center; gap: 10px; }
+.rank-pos { font-weight: 800; color: var(--muted); min-width: 26px; }
+.rank-name { font-weight: 600; font-size: 0.88rem; }
+.rank-total { font-weight: 700; }
 .stat-head { color: var(--primary); display: flex; align-items: center; gap: 7px; }
 .stat .num { color: var(--text); font-size: 24px; line-height: 32px; font-weight: 700; }
 .stat .label { color: var(--muted); font-size: 11px; line-height: 14px; font-weight: 600; }

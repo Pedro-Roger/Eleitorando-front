@@ -46,9 +46,18 @@ export default function Home() {
       .catch((e) => setListData({ error: e.message }));
   }
 
+  // Ranking da equipe (admin): pódio + lista, alternando cabos/subcabos
+  const [ranking, setRanking] = useState(null);
+  const [rankTab, setRankTab] = useState('cabos');
+
   useEffect(() => {
     api('/dashboard').then(setData).catch((e) => setError(e.message));
+    if (user?.role === 'ADMIN') api('/dashboard/ranking').then(setRanking).catch(() => {});
   }, []);
+
+  const rankList = ranking?.[rankTab] || [];
+  const podium = rankList.slice(0, 3);
+  const rankRest = rankList.slice(3, 10);
 
   return (
     <>
@@ -81,6 +90,52 @@ export default function Home() {
                   </Link>
                 </div>
               </div>
+
+              <div className="section-title">Ranking da Equipe</div>
+              <div className="segmented-tabs" role="tablist" aria-label="Tipo de ranking">
+                <button className={`tab ${rankTab === 'cabos' ? 'active' : ''}`} onClick={() => setRankTab('cabos')} role="tab" aria-selected={rankTab === 'cabos'}>
+                  Cabos
+                </button>
+                <button className={`tab ${rankTab === 'subcabos' ? 'active' : ''}`} onClick={() => setRankTab('subcabos')} role="tab" aria-selected={rankTab === 'subcabos'}>
+                  Subcabos
+                </button>
+              </div>
+
+              {podium.length > 0 && (
+                <div className="podium">
+                  {[podium[1], podium[0], podium[2]].map((p, i) => {
+                    const pos = i === 1 ? 1 : i === 0 ? 2 : 3;
+                    if (!p) return <div key={`vazio-${pos}`} className="podium-step" />;
+                    return (
+                      <div key={p.id} className={`podium-step podium-${pos}`}>
+                        <div className="podium-medal">{pos === 1 ? '🥇' : pos === 2 ? '🥈' : '🥉'}</div>
+                        <div className="podium-name">{p.name}</div>
+                        <div className="podium-count">{p.total} eleitor{p.total === 1 ? '' : 'es'}</div>
+                        <div className="podium-bar">{pos}º</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {rankRest.length > 0 && (
+                <div className="card list-divided">
+                  {rankRest.map((p, idx) => (
+                    <div key={p.id} className="rank-row">
+                      <span className="rank-pos">{idx + 4}º</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="rank-name">{p.name}</div>
+                        {rankTab === 'subcabos' && p.caboName && <div className="meta">Cabo: {p.caboName}</div>}
+                      </div>
+                      <span className="rank-total">{p.total}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {rankList.length === 0 && (
+                <div className="card"><div className="meta">Sem dados para o ranking ainda.</div></div>
+              )}
             </div>
             <div>
               <h3 className="panel-title">Atividades Recentes</h3>
