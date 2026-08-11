@@ -246,6 +246,7 @@ a { color: inherit; }
 .chip.primary { background: var(--primary-container); color: var(--on-primary); }
 .chip.warn { background: #FEF3C7; color: #92400E; }
 .chip b { color: inherit; font-weight: 700; }
+button.chip { border: 0; font-family: inherit; font-weight: 600; cursor: pointer; }
 
 .stats-grid {
   display: grid;
@@ -264,6 +265,15 @@ a { color: inherit; }
   justify-content: space-between;
   box-shadow: 0 1px 3px rgba(25, 27, 35, .06);
 }
+a.stat {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 150ms ease, transform 100ms ease;
+}
+a.stat:hover { background: color-mix(in srgb, var(--surface-lowest) 88%, var(--surface-low)); }
+a.stat:active { transform: scale(.99); }
+button.stat { font: inherit; text-align: left; cursor: pointer; width: 100%; }
 .stat-head { color: var(--primary); display: flex; align-items: center; gap: 7px; }
 .stat .num { color: var(--text); font-size: 24px; line-height: 32px; font-weight: 700; }
 .stat .label { color: var(--muted); font-size: 11px; line-height: 14px; font-weight: 600; }

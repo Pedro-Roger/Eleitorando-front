@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, getUser } from '../lib/api';
 import AppHeader from '../components/AppHeader';
+import BottomSheet from '../components/BottomSheet';
 import Icon from '../components/Icon';
 
 const roleName = {
@@ -10,15 +11,21 @@ const roleName = {
   SUBCABO: 'Subcabo eleitoral',
 };
 
-function Stat({ icon, value, label, tone }) {
-  return (
-    <div className="stat">
+function Stat({ icon, value, label, tone, onClick }) {
+  const content = (
+    <>
       <div className="stat-head" style={tone ? { color: tone } : undefined}>
         <Icon name={icon} filled size={20} />
         <span className="label">{label}</span>
       </div>
       <div className="num">{value}</div>
-    </div>
+    </>
+  );
+  if (!onClick) return <div className="stat">{content}</div>;
+  return (
+    <button type="button" className="stat tappable" onClick={onClick} aria-label={`Ver lista: ${label}`}>
+      {content}
+    </button>
   );
 }
 
@@ -26,6 +33,18 @@ export default function Home() {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const user = getUser();
+
+  // Modal com a lista de cada cartão do painel (admin)
+  const [listModal, setListModal] = useState(null); // { type, title }
+  const [listData, setListData] = useState(null);
+
+  function openList(type, title) {
+    setListModal({ type, title });
+    setListData(null);
+    api(`/dashboard/list?type=${type}`)
+      .then(setListData)
+      .catch((e) => setListData({ error: e.message }));
+  }
 
   useEffect(() => {
     api('/dashboard').then(setData).catch((e) => setError(e.message));
@@ -46,10 +65,10 @@ export default function Home() {
           <div className="dashboard-grid">
             <div>
               <div className="stats-grid">
-                <Stat icon="groups" value={data.totalVoters} label="Eleitores Totais" />
-                <Stat icon="person_add" value={data.votersToday} label="Cadastros Hoje" tone="var(--tertiary)" />
-                <Stat icon="manage_accounts" value={data.totalCabos} label="Total de Cabos" />
-                <Stat icon="supervisor_account" value={data.totalSubcabos} label="Total de Subcabos" tone="var(--secondary)" />
+                <Stat icon="groups" value={data.totalVoters} label="Eleitores Totais" onClick={() => openList('voters', 'Eleitores Totais')} />
+                <Stat icon="person_add" value={data.votersToday} label="Cadastros Hoje" tone="var(--tertiary)" onClick={() => openList('today', 'Cadastros de Hoje')} />
+                <Stat icon="manage_accounts" value={data.totalCabos} label="Total de Cabos" onClick={() => openList('cabos', 'Cabos Eleitorais')} />
+                <Stat icon="supervisor_account" value={data.totalSubcabos} label="Total de Subcabos" tone="var(--secondary)" onClick={() => openList('subcabos', 'Subcabos Eleitorais')} />
               </div>
               <div className="quick-card">
                 <h3>Acesso Rápido</h3>
@@ -122,10 +141,10 @@ export default function Home() {
         {data?.role === 'CABO' && (
           <>
             <div className="stats-grid">
-              <Stat icon="groups" value={data.teamVoters} label="Eleitores da equipe" />
-              <Stat icon="person_add" value={data.votersToday} label="Cadastros hoje" />
-              <Stat icon="how_to_reg" value={data.ownVoters} label="Meus cadastros" />
-              <Stat icon="supervisor_account" value={data.subcabosCount} label="Subcabos" />
+              <Stat icon="groups" value={data.teamVoters} label="Eleitores da equipe" to="/eleitores" />
+              <Stat icon="person_add" value={data.votersToday} label="Cadastros hoje" to="/eleitores?hoje=1" />
+              <Stat icon="how_to_reg" value={data.ownVoters} label="Meus cadastros" to="/eleitores?membro=me" />
+              <Stat icon="supervisor_account" value={data.subcabosCount} label="Subcabos" to="/equipe" />
             </div>
             <div className="section-title">Desempenho por subcabo</div>
             <div className="card">
@@ -147,8 +166,8 @@ export default function Home() {
         {data?.role === 'SUBCABO' && (
           <>
             <div className="stats-grid">
-              <Stat icon="how_to_reg" value={data.ownVoters} label="Meus cadastros" />
-              <Stat icon="person_add" value={data.votersToday} label="Cadastros hoje" />
+              <Stat icon="how_to_reg" value={data.ownVoters} label="Meus cadastros" to="/eleitores" />
+              <Stat icon="person_add" value={data.votersToday} label="Cadastros hoje" to="/eleitores?hoje=1" />
             </div>
             {data.parentName && (
               <div className="card">
@@ -162,6 +181,32 @@ export default function Home() {
           </>
         )}
       </div>
+
+      {/* Modal com a lista do cartão clicado */}
+      <BottomSheet open={!!listModal} onClose={() => setListModal(null)} title={listModal?.title}>
+        {!listData && <div className="empty">Carregando...</div>}
+        {listData?.error && <div className="alert error">{listData.error}</div>}
+        {listData?.items && (
+          <>
+            {listData.items.length === 0 && <div className="empty">Nada por aqui ainda.</div>}
+            {listData.items.length > 0 && (
+              <div className="card list-divided">
+                {listData.items.map((it) => (
+                  <div key={it.id}>
+                    <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{it.title}</div>
+                    <div className="meta">{it.subtitle}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {listData.total > listData.items.length && (
+              <div className="meta" style={{ marginTop: 8 }}>
+                Mostrando os {listData.items.length} mais recentes de {listData.total}.
+              </div>
+            )}
+          </>
+        )}
+      </BottomSheet>
     </>
   );
 }
