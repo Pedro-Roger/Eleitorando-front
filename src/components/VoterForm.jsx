@@ -20,7 +20,7 @@ export default function VoterForm({ initial, onSubmit, submitting, error, submit
     notes: initial?.notes || '',
   });
 
-  const canSave = form.name.trim() && form.state && form.city;
+  const canSave = form.name.trim() && form.phone.replace(/\D/g, '') && form.state && form.city;
 
   return (
     <form
@@ -38,7 +38,7 @@ export default function VoterForm({ initial, onSubmit, submitting, error, submit
       </div>
       <div className="row-actions" style={{ marginTop: 0 }}>
         <div className="field" style={{ flex: 1 }}>
-          <label>Telefone</label>
+          <label>Celular <span className="req">*</span></label>
           <input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(00) 00000-0000" />
         </div>
         <div className="field" style={{ flex: 1 }}>

@@ -15,6 +15,7 @@ const COLUMN_OPTIONS = [
   { key: 'zone', label: 'Zona' },
   { key: 'section', label: 'Seção' },
   { key: 'createdBy', label: 'Cadastrado por' },
+  { key: 'cabo', label: 'Cabo responsável' },
 ];
 
 const FORMATS = [
@@ -35,6 +36,7 @@ export default function Export() {
   const [selCabos, setSelCabos] = useState([]);
   const [selSubs, setSelSubs] = useState({}); // { caboId: [subId, ...] }
 
+  const [subcabo, setSubcabo] = useState('');
   const [city, setCity] = useState('');
   const [neighborhood, setNeighborhood] = useState('');
   const [gender, setGender] = useState('');
@@ -47,10 +49,21 @@ export default function Export() {
     if (isAdmin) api('/export/options').then(setOptions).catch((e) => setError(e.message));
   }, [isAdmin]);
 
+  // Subcabos disponíveis no filtro: todos, ou só os dos cabos marcados na árvore
+  const subcaboOptions = useMemo(() => {
+    if (!options) return [];
+    const cabos = selCabos.length
+      ? options.cabos.filter((c) => selCabos.includes(c.id))
+      : options.cabos;
+    return cabos.flatMap((c) => c.subcabos.map((s) => ({ ...s, caboName: c.name })));
+  }, [options, selCabos]);
+
   // Expande a seleção da equipe para a lista final de "cadastrado por":
-  // nada marcado = todos; cabo marcado sem subcabos marcados = cabo + todos os subcabos dele;
+  // subcabo escolhido no filtro = só ele; senão: nada marcado = todos;
+  // cabo marcado sem subcabos marcados = cabo + todos os subcabos dele;
   // cabo marcado com subcabos marcados = cabo + apenas os marcados.
   const createdByIds = useMemo(() => {
+    if (subcabo && subcaboOptions.some((s) => s.id === Number(subcabo))) return [Number(subcabo)];
     if (!options || selCabos.length === 0) return [];
     const ids = [];
     for (const caboId of selCabos) {
@@ -62,7 +75,7 @@ export default function Export() {
       else ids.push(...chosen);
     }
     return ids;
-  }, [options, selCabos, selSubs]);
+  }, [options, selCabos, selSubs, subcabo, subcaboOptions]);
 
   const query = useMemo(() => {
     const p = new URLSearchParams();
@@ -157,6 +170,18 @@ export default function Export() {
 
             <div className="section-title">Filtros</div>
             <div className="card">
+              {subcaboOptions.length > 0 && (
+                <div className="field">
+                  <label>Subcabo</label>
+                  <select value={subcabo} onChange={(e) => setSubcabo(e.target.value)}>
+                    <option value="">Todos</option>
+                    {subcaboOptions.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name} — {s.caboName}</option>
+                    ))}
+                  </select>
+                  <div className="hint">Escolhendo um subcabo, saem apenas os eleitores cadastrados por ele.</div>
+                </div>
+              )}
               <div className="field">
                 <label>Cidade</label>
                 <select value={city} onChange={(e) => setCity(e.target.value)}>
