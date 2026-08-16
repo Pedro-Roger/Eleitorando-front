@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { getToken, getUser } from './lib/api';
+import { ModalStackProvider } from './lib/modalStack';
 import TabBar from './components/TabBar';
 import SplashScreen from './components/SplashScreen';
 import Login from './pages/Login';
@@ -29,27 +30,29 @@ export default function App() {
   const [booting, setBooting] = useState(true);
 
   return (
-    <div className={`app-shell ${hideTabs ? 'auth-shell' : ''} ${isBrandHeader ? 'tall-header' : ''}`}>
-      {booting && <SplashScreen onDone={() => setBooting(false)} />}
-      {/* A rolagem acontece neste contêiner (e não no body): evita o bug do iOS Safari
-          em que elementos position:fixed "flutuam" quando a altura da tela muda
-          (ligação ativa, teclado aberto, barra do navegador recolhendo). */}
-      <main className="app-scroll"><Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/trocar-senha" element={<ChangePassword />} />
-        <Route path="/" element={<Protected><Home /></Protected>} />
-        <Route path="/equipe" element={<Protected><Team /></Protected>} />
-        <Route path="/eleitores" element={<Protected><Voters /></Protected>} />
-        <Route path="/perfil" element={<Protected><Profile /></Protected>} />
-        <Route path="/painel" element={<Protected><Panel /></Protected>} />
-        <Route path="/candidatos" element={<Protected><Candidates /></Protected>} />
-        <Route path="/relatorios" element={<Protected><Reports /></Protected>} />
-        <Route path="/atividades" element={<Protected><Activities /></Protected>} />
-        <Route path="/configuracoes" element={<Protected><Settings /></Protected>} />
-        <Route path="/exportar" element={<Protected><Export /></Protected>} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes></main>
-      {!hideTabs && getToken() && <TabBar role={user?.role} />}
-    </div>
+    <ModalStackProvider>
+      <div className={`app-shell ${hideTabs ? 'auth-shell' : ''} ${isBrandHeader ? 'tall-header' : ''}`}>
+        {booting && <SplashScreen onDone={() => setBooting(false)} />}
+        {/* A rolagem acontece neste contêiner (e não no body): evita o bug do iOS Safari
+            em que elementos position:fixed "flutuam" quando a altura da tela muda
+            (ligação ativa, teclado aberto, barra do navegador recolhendo). */}
+        <main className="app-scroll"><Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/trocar-senha" element={<ChangePassword />} />
+          <Route path="/" element={<Protected><Home /></Protected>} />
+          <Route path="/equipe" element={<Protected><Team /></Protected>} />
+          <Route path="/eleitores" element={<Protected><Voters /></Protected>} />
+          <Route path="/perfil" element={<Protected><Profile /></Protected>} />
+          <Route path="/painel" element={<Protected><Panel /></Protected>} />
+          <Route path="/candidatos" element={<Protected><Candidates /></Protected>} />
+          <Route path="/relatorios" element={<Protected><Reports /></Protected>} />
+          <Route path="/atividades" element={<Protected><Activities /></Protected>} />
+          <Route path="/configuracoes" element={<Protected><Settings /></Protected>} />
+          <Route path="/exportar" element={<Protected><Export /></Protected>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes></main>
+        {!hideTabs && getToken() && <TabBar role={user?.role} />}
+      </div>
+    </ModalStackProvider>
   );
 }

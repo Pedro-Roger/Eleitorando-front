@@ -1,12 +1,21 @@
 import { useEffect, useId, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import Icon from './Icon';
+import { useModalLayer } from '../lib/modalStack';
 
 export default function BottomSheet({ open, onClose, title, hideHeader = false, children }) {
   const dialogRef = useRef(null);
   const titleId = useId();
+  const layerId = useId();
+  // Só o modal no topo da pilha (isTop) mostra backdrop/painel e captura
+  // foco/teclado. Modais abertos "por baixo" (ex.: formulário ainda aberto
+  // quando um alerta de erro aparece por cima) continuam montados — sem
+  // perder o que o usuário já digitou — mas ficam ocultos até voltarem ao
+  // topo, evitando dois `.sheet-backdrop` sobrepostos na tela ao mesmo tempo.
+  const { isTop } = useModalLayer(layerId, open);
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open || !isTop) return undefined;
     const previousFocus = document.activeElement;
     const dialog = dialogRef.current;
     const focusable = () => [...dialog.querySelectorAll(
@@ -38,15 +47,19 @@ export default function BottomSheet({ open, onClose, title, hideHeader = false, 
       document.removeEventListener('keydown', handleKey);
       previousFocus?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open, isTop, onClose]);
 
   if (!open) return null;
-  return (
-    <div className="sheet-backdrop" onClick={(e) => e.target === e.currentTarget && onClose?.()}>
+  return createPortal(
+    <div
+      className={`sheet-backdrop${isTop ? '' : ' sheet-backdrop--behind'}`}
+      onClick={(e) => isTop && e.target === e.currentTarget && onClose?.()}
+    >
       <div
         className="sheet"
         role="dialog"
-        aria-modal="true"
+        aria-modal={isTop}
+        aria-hidden={!isTop}
         aria-labelledby={title ? titleId : undefined}
         ref={dialogRef}
       >
@@ -61,6 +74,11 @@ export default function BottomSheet({ open, onClose, title, hideHeader = false, 
         )}
         {children}
       </div>
-    </div>
+    </div>,
+    // Escapa de .app-scroll (overflow-y:auto + -webkit-overflow-scrolling:touch):
+    // no iOS Safari, position:fixed dentro desse tipo de contêiner fica "preso" e
+    // se comporta como position:absolute relativo a ele em vez da viewport — por
+    // isso a tabbar (irmã de .app-scroll, fora dele) aparecia por cima do sheet.
+    document.getElementById('modal-root') || document.body,
   );
 }

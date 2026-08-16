@@ -1,4 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,0&display=swap');
+/* Fonte carregada via <link> em index.html (preconnect + stylesheet), não @import aqui —
+   @import só começa a baixar depois deste arquivo CSS já ter sido buscado e parseado,
+   um round-trip a mais de atraso que alargava a janela de texto-fallback na tabbar. */
 
 :root {
   --primary: #003fb1;
@@ -176,10 +178,10 @@ a { color: inherit; }
 .tabbar {
   flex: none;
   z-index: 45;
-  min-height: calc(56px + var(--safe-bottom));
+  height: calc(56px + var(--safe-bottom));
   padding: 0 4px var(--safe-bottom);
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-around;
   background: color-mix(in srgb, var(--surface) 97%, transparent);
   border-top: 1px solid var(--outline-variant);
@@ -187,7 +189,7 @@ a { color: inherit; }
 }
 .tabbar a {
   min-width: 0;
-  min-height: 56px;
+  height: 56px;
   flex: 1;
   color: var(--muted);
   text-decoration: none;
@@ -200,6 +202,7 @@ a { color: inherit; }
   justify-content: center;
   gap: 4px;
   border-radius: 8px;
+  overflow: hidden;
   transition: color 150ms ease, background 150ms ease, transform 150ms ease;
 }
 .tabbar a:hover { background: var(--surface-low); }
@@ -651,6 +654,15 @@ button.stat { font: inherit; text-align: left; cursor: pointer; width: 100%; }
   align-items: flex-end;
   justify-content: center;
   animation: fade-in 150ms ease-out;
+}
+/* Modal aberto "por baixo" de outro (ex.: formulário ainda montado quando um
+   alerta/confirmação abre por cima dele). Fica invisível e não-interativo em
+   vez de desmontar, então o que o usuário já preencheu não se perde — e a
+   tela nunca mostra dois backdrops/painéis sobrepostos ao mesmo tempo. */
+.sheet-backdrop--behind {
+  visibility: hidden;
+  pointer-events: none;
+  animation: none;
 }
 .sheet {
   width: 100%;
