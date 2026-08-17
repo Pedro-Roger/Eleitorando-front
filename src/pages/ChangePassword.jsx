@@ -52,7 +52,7 @@ export default function ChangePassword() {
               type="password"
               value={next}
               onChange={(e) => setNext(e.target.value)}
-              placeholder="Mínimo 8 caracteres, letras e números"
+              placeholder="Deve conter ao menos um número"
             />
           </div>
           <div className="field">

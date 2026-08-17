@@ -83,7 +83,7 @@ export default function UserForm({ role, cabos = [], onSubmit, submitting, error
           type="password"
           value={form.password}
           onChange={(e) => set('password', e.target.value)}
-          placeholder="Mínimo 8 caracteres, letras e números"
+          placeholder="Deve conter ao menos um número"
         />
       </div>
       <div className="field">

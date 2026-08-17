@@ -195,7 +195,7 @@ export default function Profile() {
           </div>
           <div className="field">
             <label>Nova senha</label>
-            <input type="password" value={pwForm.next} onChange={(e) => setPwForm({ ...pwForm, next: e.target.value })} placeholder="Mínimo 8 caracteres, letras e números" />
+            <input type="password" value={pwForm.next} onChange={(e) => setPwForm({ ...pwForm, next: e.target.value })} placeholder="Deve conter ao menos um número" />
           </div>
           <div className="field">
             <label>Confirmar nova senha</label>

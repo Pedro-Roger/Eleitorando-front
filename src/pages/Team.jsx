@@ -429,7 +429,7 @@ export default function Team() {
                 type="password"
                 value={resetPw}
                 onChange={(e) => setResetPw(e.target.value)}
-                placeholder="Mínimo 8 caracteres, letras e números"
+                placeholder="Deve conter ao menos um número"
               />
               <div className="hint">O usuário deverá trocar a senha no próximo acesso.</div>
             </div>
