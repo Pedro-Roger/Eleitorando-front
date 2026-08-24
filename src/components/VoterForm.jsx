@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import StateCitySelect from './StateCitySelect';
 import Icon from './Icon';
+import { api } from '../lib/api';
 
 const GENDERS = ['Feminino', 'Masculino', 'Outro', 'Prefere não informar'];
 
@@ -19,8 +20,44 @@ export default function VoterForm({ initial, onSubmit, submitting, error, submit
     section: initial?.section || '',
     notes: initial?.notes || '',
   });
+  const [zoneSecaoStatus, setZoneSecaoStatus] = useState(''); // '', 'found', 'not-found'
+  const autoFilledRef = useRef({ city: false, neighborhood: false });
 
-  const canSave = form.name.trim() && form.phone.replace(/\D/g, '') && form.state && form.city;
+  // Quando zona + seção são preenchidas (Ceará), busca cidade/bairro na tabela do
+  // TRE-CE e preenche automaticamente — só sobrescreve campos que o usuário não
+  // digitou manualmente (ou que já vieram do próprio autofill numa consulta anterior).
+  useEffect(() => {
+    const zone = form.zone.replace(/\D/g, '');
+    const section = form.section.replace(/\D/g, '');
+    if (form.state !== 'CE' || !zone || !section) {
+      setZoneSecaoStatus('');
+      return;
+    }
+    const timer = setTimeout(() => {
+      api(`/voters/lookup-zona-secao?zone=${zone}&section=${section}`)
+        .then(({ match }) => {
+          if (!match) {
+            setZoneSecaoStatus('not-found');
+            return;
+          }
+          setZoneSecaoStatus('found');
+          setForm((f) => {
+            const next = { ...f };
+            if (match.city && (!f.city || autoFilledRef.current.city)) {
+              next.city = match.city;
+              autoFilledRef.current.city = true;
+            }
+            if (match.neighborhood && (!f.neighborhood || autoFilledRef.current.neighborhood)) {
+              next.neighborhood = match.neighborhood;
+              autoFilledRef.current.neighborhood = true;
+            }
+            return next;
+          });
+        })
+        .catch(() => setZoneSecaoStatus(''));
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [form.zone, form.section, form.state]);
 
   return (
     <form
@@ -33,12 +70,12 @@ export default function VoterForm({ initial, onSubmit, submitting, error, submit
 
       <h3 className="form-section-title">Dados Pessoais</h3>
       <div className="field">
-        <label>Nome completo <span className="req">*</span></label>
+        <label>Nome completo</label>
         <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex: Maria da Silva" />
       </div>
       <div className="row-actions" style={{ marginTop: 0 }}>
         <div className="field" style={{ flex: 1 }}>
-          <label>Celular <span className="req">*</span></label>
+          <label>Celular</label>
           <input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(00) 00000-0000" />
         </div>
         <div className="field" style={{ flex: 1 }}>
@@ -74,13 +111,20 @@ export default function VoterForm({ initial, onSubmit, submitting, error, submit
         state={form.state}
         city={form.city}
         hideState
-        onChange={({ state, city }) => setForm({ ...form, state, city })}
+        cityRequired={false}
+        onChange={({ state, city }) => {
+          autoFilledRef.current.city = false;
+          setForm({ ...form, state, city });
+        }}
       />
       <div className="field">
         <label>Bairro</label>
         <input
           value={form.neighborhood}
-          onChange={(e) => setForm({ ...form, neighborhood: e.target.value })}
+          onChange={(e) => {
+            autoFilledRef.current.neighborhood = false;
+            setForm({ ...form, neighborhood: e.target.value });
+          }}
           placeholder="Bairro do eleitor"
         />
       </div>
@@ -104,6 +148,16 @@ export default function VoterForm({ initial, onSubmit, submitting, error, submit
           />
         </div>
       </div>
+      {zoneSecaoStatus === 'found' && (
+        <div className="hint" style={{ marginTop: -8, marginBottom: 12 }}>
+          <Icon name="check_circle" size={14} /> Cidade e bairro preenchidos a partir da zona/seção.
+        </div>
+      )}
+      {zoneSecaoStatus === 'not-found' && (
+        <div className="hint" style={{ marginTop: -8, marginBottom: 12 }}>
+          <Icon name="info" size={14} /> Zona/seção não encontrada — preencha cidade e bairro manualmente.
+        </div>
+      )}
 
       <h3 className="form-section-title">Detalhes Adicionais</h3>
       <div className="field">
@@ -115,7 +169,7 @@ export default function VoterForm({ initial, onSubmit, submitting, error, submit
           placeholder="Opcional"
         />
       </div>
-      <button className="btn" disabled={!canSave || submitting}>
+      <button className="btn" disabled={submitting}>
         <Icon name="save" size={18} />
         {submitting ? 'Salvando...' : submitLabel}
       </button>

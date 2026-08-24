@@ -9,7 +9,7 @@ import Icon from '../components/Icon';
 import { avatarColor } from '../lib/avatar';
 
 function locationLine(v) {
-  return v.neighborhood || v.city;
+  return v.neighborhood || v.city || 'Sem localização';
 }
 
 export default function Voters() {
@@ -198,17 +198,17 @@ export default function Voters() {
             <div className="card-row">
               <div className="card-leading">
                 <div className="avatar" style={{ background: avatarColor(v.name), color: '#fff', borderColor: 'transparent' }}>
-                  {v.name.charAt(0).toUpperCase()}
+                  {(v.name || '?').charAt(0).toUpperCase()}
                 </div>
                 <div className="card-copy">
-                  <div className="card-title">{v.name}</div>
+                  <div className="card-title">{v.name || 'Sem nome'}</div>
                   <div className="meta"><Icon name="location_on" size={14} /> {locationLine(v)}</div>
                 </div>
               </div>
               <button
                 className="icon-button"
                 onClick={() => setActionTarget(v)}
-                aria-label={`Mais opções de ${v.name}`}
+                aria-label={`Mais opções de ${v.name || 'eleitor sem nome'}`}
               >
                 <Icon name="more_vert" size={20} />
               </button>

@@ -6,7 +6,7 @@ import { fetchStates, fetchCities } from '../lib/ibge';
 const FIXED_STATE = 'CE';
 const FIXED_STATE_LABEL = 'Ceará (CE)';
 
-export default function StateCitySelect({ state, city, onChange, disabled, allowStateChange = false, hideState = false }) {
+export default function StateCitySelect({ state, city, onChange, disabled, allowStateChange = false, hideState = false, cityRequired = true }) {
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
   const [loadingCities, setLoadingCities] = useState(false);
@@ -63,7 +63,7 @@ export default function StateCitySelect({ state, city, onChange, disabled, allow
       )}
       <div className="field">
         <label>
-          Cidade <span className="req">*</span>
+          Cidade {cityRequired && <span className="req">*</span>}
         </label>
         <select
           value={city || ''}
