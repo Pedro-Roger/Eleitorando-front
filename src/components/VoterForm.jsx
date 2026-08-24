@@ -21,6 +21,7 @@ export default function VoterForm({ initial, onSubmit, submitting, error, submit
     notes: initial?.notes || '',
   });
   const [zoneSecaoStatus, setZoneSecaoStatus] = useState(''); // '', 'found', 'not-found'
+  const [reverseMatches, setReverseMatches] = useState([]); // opções quando cidade+bairro batem com mais de 1 zona/seção
   const autoFilledRef = useRef({ city: false, neighborhood: false });
 
   // Quando zona + seção são preenchidas (Ceará), busca cidade/bairro na tabela do
@@ -59,6 +60,40 @@ export default function VoterForm({ initial, onSubmit, submitting, error, submit
     return () => clearTimeout(timer);
   }, [form.zone, form.section, form.state]);
 
+  // Sentido inverso: se zona/seção ainda não foram preenchidas, cidade+bairro tentam
+  // achar a(s) seção(ões) correspondentes. Um bairro pode cair em várias seções —
+  // se achar só uma, preenche direto; se achar mais, mostra uma lista pra escolher.
+  useEffect(() => {
+    const zone = form.zone.replace(/\D/g, '');
+    const section = form.section.replace(/\D/g, '');
+    if (form.state !== 'CE' || zone || section || !form.city.trim() || !form.neighborhood.trim()) {
+      setReverseMatches([]);
+      return;
+    }
+    const timer = setTimeout(() => {
+      api(`/voters/lookup-city-bairro?city=${encodeURIComponent(form.city)}&neighborhood=${encodeURIComponent(form.neighborhood)}`)
+        .then(({ matches }) => {
+          if (!matches || !matches.length) {
+            setReverseMatches([]);
+            return;
+          }
+          if (matches.length === 1) {
+            setForm((f) => ({ ...f, zone: String(matches[0].zone), section: String(matches[0].section) }));
+            setReverseMatches([]);
+            return;
+          }
+          setReverseMatches(matches);
+        })
+        .catch(() => setReverseMatches([]));
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [form.city, form.neighborhood, form.state, form.zone, form.section]);
+
+  function pickReverseMatch(m) {
+    setForm((f) => ({ ...f, zone: String(m.zone), section: String(m.section) }));
+    setReverseMatches([]);
+  }
+
   return (
     <form
       onSubmit={(e) => {
@@ -73,6 +108,36 @@ export default function VoterForm({ initial, onSubmit, submitting, error, submit
         <label>Nome completo</label>
         <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex: Maria da Silva" />
       </div>
+      <div className="row-actions" style={{ marginTop: 0 }}>
+        <div className="field" style={{ flex: 1 }}>
+          <label>Zona eleitoral</label>
+          <input
+            inputMode="numeric"
+            value={form.zone}
+            onChange={(e) => setForm({ ...form, zone: e.target.value })}
+            placeholder="Ex.: 012"
+          />
+        </div>
+        <div className="field" style={{ flex: 1 }}>
+          <label>Seção</label>
+          <input
+            inputMode="numeric"
+            value={form.section}
+            onChange={(e) => setForm({ ...form, section: e.target.value })}
+            placeholder="Ex.: 0345"
+          />
+        </div>
+      </div>
+      {zoneSecaoStatus === 'found' && (
+        <div className="hint" style={{ marginTop: -8, marginBottom: 12 }}>
+          <Icon name="check_circle" size={14} /> Cidade e bairro preenchidos a partir da zona/seção.
+        </div>
+      )}
+      {zoneSecaoStatus === 'not-found' && (
+        <div className="hint" style={{ marginTop: -8, marginBottom: 12 }}>
+          <Icon name="info" size={14} /> Zona/seção não encontrada — preencha cidade e bairro manualmente.
+        </div>
+      )}
       <div className="row-actions" style={{ marginTop: 0 }}>
         <div className="field" style={{ flex: 1 }}>
           <label>Celular</label>
@@ -128,34 +193,21 @@ export default function VoterForm({ initial, onSubmit, submitting, error, submit
           placeholder="Bairro do eleitor"
         />
       </div>
-      <div className="row-actions" style={{ marginTop: 0 }}>
-        <div className="field" style={{ flex: 1 }}>
-          <label>Zona eleitoral</label>
-          <input
-            inputMode="numeric"
-            value={form.zone}
-            onChange={(e) => setForm({ ...form, zone: e.target.value })}
-            placeholder="Ex.: 012"
-          />
-        </div>
-        <div className="field" style={{ flex: 1 }}>
-          <label>Seção</label>
-          <input
-            inputMode="numeric"
-            value={form.section}
-            onChange={(e) => setForm({ ...form, section: e.target.value })}
-            placeholder="Ex.: 0345"
-          />
-        </div>
-      </div>
-      {zoneSecaoStatus === 'found' && (
-        <div className="hint" style={{ marginTop: -8, marginBottom: 12 }}>
-          <Icon name="check_circle" size={14} /> Cidade e bairro preenchidos a partir da zona/seção.
-        </div>
-      )}
-      {zoneSecaoStatus === 'not-found' && (
-        <div className="hint" style={{ marginTop: -8, marginBottom: 12 }}>
-          <Icon name="info" size={14} /> Zona/seção não encontrada — preencha cidade e bairro manualmente.
+      {reverseMatches.length > 0 && (
+        <div className="field">
+          <label>Encontramos {reverseMatches.length} seções nesse bairro — selecione a do eleitor</label>
+          <div className="pill-select">
+            {reverseMatches.map((m) => (
+              <button
+                key={`${m.zone}-${m.section}`}
+                type="button"
+                className="pill-option"
+                onClick={() => pickReverseMatch(m)}
+              >
+                Zona {m.zone}, Seção {m.section}{m.local ? ` — ${m.local}` : ''}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
