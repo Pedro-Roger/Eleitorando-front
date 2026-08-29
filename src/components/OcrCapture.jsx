@@ -223,7 +223,6 @@ export default function OcrCapture({ open, onClose, onResult, file }) {
         ref={inputRef}
         type="file"
         accept="image/*,.pdf"
-        capture="environment"
         style={{ display: 'none' }}
         onChange={(e) => {
           const f = e.target.files?.[0];
