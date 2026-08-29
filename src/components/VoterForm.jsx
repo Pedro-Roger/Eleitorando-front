@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import StateCitySelect from './StateCitySelect';
 import Icon from './Icon';
+import OcrCapture from './OcrCapture';
 import { api } from '../lib/api';
 
 const GENDERS = ['Feminino', 'Masculino', 'Outro', 'Prefere não informar'];
@@ -8,7 +9,7 @@ const GENDERS = ['Feminino', 'Masculino', 'Outro', 'Prefere não informar'];
 // Formulário de cadastro/edição de eleitor — reutilizado tanto no "Novo Eleitor"
 // quanto na edição de um eleitor já existente (initial preenchido).
 export default function VoterForm({ initial, onSubmit, submitting, error, submitLabel = 'Salvar Cadastro' }) {
-  const [form, setForm] = useState({
+const [form, setForm] = useState({
     name: initial?.name || '',
     phone: initial?.phone || '',
     state: initial?.state || 'CE',
@@ -18,10 +19,14 @@ export default function VoterForm({ initial, onSubmit, submitting, error, submit
     age: initial?.age ?? '',
     zone: initial?.zone || '',
     section: initial?.section || '',
+    titleNumber: initial?.titleNumber || '',
     notes: initial?.notes || '',
   });
-  const [zoneSecaoStatus, setZoneSecaoStatus] = useState(''); // '', 'found', 'not-found'
-  const [reverseMatches, setReverseMatches] = useState([]); // opções quando cidade+bairro batem com mais de 1 zona/seção
+  const [zoneSecaoStatus, setZoneSecaoStatus] = useState('');
+  const [reverseMatches, setReverseMatches] = useState([]);
+  const [ocrOpen, setOcrOpen] = useState(false);
+  const [ocrFile, setOcrFile] = useState(null);
+  const ocrFileInputRef = useRef(null);
   const autoFilledRef = useRef({ city: false, neighborhood: false });
 
   // Quando zona + seção são preenchidas (Ceará), busca cidade/bairro na tabela do
@@ -128,6 +133,21 @@ export default function VoterForm({ initial, onSubmit, submitting, error, submit
           />
         </div>
       </div>
+      <div className="row-actions" style={{ marginTop: 0 }}>
+        <div className="field" style={{ flex: 1 }}>
+          <label>Nº Título</label>
+          <input
+            value={form.titleNumber}
+            onChange={(e) => setForm({ ...form, titleNumber: e.target.value })}
+            placeholder="Opcional"
+          />
+        </div>
+        <div className="field" style={{ flex: 1, alignSelf: 'flex-end' }}>
+          <button type="button" className="btn secondary" onClick={() => ocrFileInputRef.current?.click()}>
+            <Icon name="camera_alt" size={16} /> OCR Título
+          </button>
+        </div>
+      </div>
       {zoneSecaoStatus === 'found' && (
         <div className="hint" style={{ marginTop: -8, marginBottom: 12 }}>
           <Icon name="check_circle" size={14} /> Cidade e bairro preenchidos a partir da zona/seção.
@@ -221,6 +241,39 @@ export default function VoterForm({ initial, onSubmit, submitting, error, submit
           placeholder="Opcional"
         />
       </div>
+
+      {/* input escondido: clique no botão abre o picker direto (fila no servidor) */}
+      <input
+        ref={ocrFileInputRef}
+        type="file"
+        accept="image/*,.pdf"
+        capture="environment"
+        style={{ display: 'none' }}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            setOcrFile(file);
+            setOcrOpen(true);
+          }
+          e.target.value = '';
+        }}
+      />
+
+      <OcrCapture
+        open={ocrOpen}
+        onClose={() => { setOcrOpen(false); setOcrFile(null); }}
+        onResult={(fields) => {
+          setForm((f) => ({
+            ...f,
+            name: fields.nome || f.name,
+            zone: fields.zona || f.zone,
+            section: fields.secao || f.section,
+            titleNumber: fields.titleNumber || f.titleNumber,
+          }));
+        }}
+        file={ocrFile}
+      />
+
       <button className="btn" disabled={submitting}>
         <Icon name="save" size={18} />
         {submitting ? 'Salvando...' : submitLabel}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api, getUser } from '../lib/api';
 import BottomSheet from '../components/BottomSheet';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -14,9 +15,11 @@ export default function Team() {
   const me = getUser();
   const isAdmin = me?.role === 'ADMIN';
 
+  const [urlParams] = useSearchParams();
   const [users, setUsers] = useState([]);
   const [allSubcabos, setAllSubcabos] = useState([]);
-  const [tab, setTab] = useState('cabos'); // visão admin: cabos | subcabos
+  // visão admin: cabos | subcabos (aba inicial pode vir da URL, ex.: card do Início)
+  const [tab, setTab] = useState(urlParams.get('tab') === 'subcabos' ? 'subcabos' : 'cabos');
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
 

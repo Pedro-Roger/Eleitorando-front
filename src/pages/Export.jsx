@@ -14,6 +14,7 @@ const COLUMN_OPTIONS = [
   { key: 'age', label: 'Idade' },
   { key: 'zone', label: 'Zona' },
   { key: 'section', label: 'Seção' },
+  { key: 'titleNumber', label: 'Nº Título' },
   { key: 'createdBy', label: 'Cadastrado por' },
   { key: 'cabo', label: 'Cabo responsável' },
 ];

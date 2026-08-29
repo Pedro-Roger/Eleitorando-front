@@ -341,7 +341,7 @@ button.stat { font: inherit; text-align: left; cursor: pointer; width: 100%; }
   outline: 0;
   background: var(--surface-lowest);
   color: var(--text);
-  font-size: 14px;
+  font-size: 16px;
   transition: border 150ms ease, box-shadow 150ms ease;
 }
 .field textarea { min-height: 80px; resize: vertical; }
@@ -363,6 +363,22 @@ button.stat { font: inherit; text-align: left; cursor: pointer; width: 100%; }
 }
 .input-icon input { padding-left: 44px; }
 .search-field { margin-bottom: 16px; }
+.combobox-list {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--surface-lowest);
+  border: 1px solid var(--outline-variant);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .12);
+}
+.combobox-option { padding: 11px 14px; font-size: 14px; color: var(--text); cursor: pointer; }
+.combobox-option.is-highlighted, .combobox-option:hover { background: var(--surface-low); }
+.combobox-empty { padding: 11px 14px; font-size: 14px; color: var(--muted); }
 
 .btn {
   min-height: 48px;
@@ -720,6 +736,20 @@ button.stat { font: inherit; text-align: left; cursor: pointer; width: 100%; }
 .login-logo p { margin-top: 4px; color: var(--muted); font-size: 14px; }
 .login-logo-img { max-width: 300px; width: 100%; height: auto; margin: 0 auto; display: block; }
 .login-version { margin-top: 28px; color: var(--outline); text-align: center; font-size: 10px; }
+.login-debug {
+  margin-top: 16px;
+  padding: 12px;
+  max-height: 220px;
+  overflow: auto;
+  border: 1px dashed var(--outline-variant);
+  border-radius: 8px;
+  background: var(--surface-low);
+  color: var(--text);
+  font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+  text-align: left;
+}
 
 @keyframes slide-up { from { transform: translateY(100%); } }
 @keyframes fade-in { from { opacity: 0; } }
@@ -746,6 +776,25 @@ button.stat { font: inherit; text-align: left; cursor: pointer; width: 100%; }
 }
 @keyframes splash-logo-in { from { opacity: 0; transform: scale(.8); } }
 
+.progress-track {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-high);
+  margin: 12px 0;
+}
+.progress-fill {
+  height: 100%;
+  width: 30%;
+  border-radius: inherit;
+  background: var(--primary);
+  animation: progress-slide 1.2s ease-in-out infinite;
+}
+@keyframes progress-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
 @media (min-width: 768px) {
   .app-header { min-height: 72px; padding-inline: 32px; grid-template-columns: 48px 1fr 48px; }
   .app-header-logo { height: 128px; }
@@ -761,4 +810,84 @@ button.stat { font: inherit; text-align: left; cursor: pointer; width: 100%; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+/* Barra de progresso indeterminada do OCR em background */
+.ocr-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-high);
+  overflow: hidden;
+}
+.ocr-progress-fill {
+  height: 100%;
+  width: 40%;
+  border-radius: 999px;
+  background: var(--primary);
+  animation: ocr-slide 1.2s ease-in-out infinite;
+}
+@keyframes ocr-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
+/* Fila de jobs OCR — lista visual com indicadores de status */
+.ocr-queue {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.ocr-queue-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--surface-high);
+  border: 1px solid transparent;
+  transition: border-color .15s, background .15s;
+  font: inherit;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+}
+.ocr-queue-item:hover {
+  background: var(--surface-high);
+}
+.ocr-queue-item.active {
+  border-color: var(--primary);
+}
+.ocr-queue-item .q-info {
+  flex: 1;
+  min-width: 0;
+}
+.ocr-queue-item .q-info .q-filename {
+  font-size: .78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ocr-queue-item .q-info .q-meta {
+  font-size: .7rem;
+  color: var(--muted);
+}
+.ocr-queue-item .q-status {
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ocr-queue-item .q-status-uploading,
+.ocr-queue-item .q-status-queued { color: var(--muted); }
+.ocr-queue-item .q-status-processing { color: var(--primary); animation: ocr-pulse 1s ease-in-out infinite; }
+.ocr-queue-item .q-status-done,
+.ocr-queue-item .q-status-applied { color: var(--success); }
+.ocr-queue-item .q-status-error { color: var(--danger); }
+@keyframes ocr-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .4; }
 }

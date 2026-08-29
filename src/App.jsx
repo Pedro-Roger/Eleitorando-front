@@ -18,7 +18,15 @@ import Settings from './pages/Settings';
 import Export from './pages/Export';
 
 function Protected({ children }) {
-  if (!getToken()) return <Navigate to="/login" replace />;
+  const token = getToken();
+  if (!token) {
+    if (typeof window !== 'undefined') {
+      const entry = { at: new Date().toISOString(), event: 'protected:redirect', path: window.location.pathname };
+      window.__authDebug = [...(window.__authDebug || []), entry].slice(-50);
+      console.warn('[auth]', entry);
+    }
+    return <Navigate to="/login" replace />;
+  }
   return children;
 }
 

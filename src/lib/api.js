@@ -1,8 +1,18 @@
 // Em desenvolvimento, usamos "/api" (o Vite reescreve e encaminha para a API local).
 // Em produção, defina VITE_API_URL com a URL completa da API (ex.: http://192.99.208.37:3333)
 // antes de rodar "npm run build" — sem isso, o build de produção não sabe onde está a API.
-const API_ORIGIN = import.meta.env.VITE_API_URL || '';
+const API_ORIGIN = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || '');
 const BASE = API_ORIGIN || '/api';
+
+function authDebug(event, payload = {}) {
+  if (typeof window === 'undefined') return;
+  const entry = { at: new Date().toISOString(), event, ...payload };
+  window.__authDebug = [...(window.__authDebug || []), entry].slice(-50);
+  try {
+    sessionStorage.setItem('authDebugTrail', JSON.stringify(window.__authDebug));
+  } catch {}
+  console.log('[auth]', entry);
+}
 
 // Monta a URL completa de um arquivo servido pela API (ex.: foto de candidato em /uploads/...).
 // Em dev, o caminho relativo já funciona graças ao proxy do Vite; em produção, precisa do domínio da API.
@@ -12,11 +22,14 @@ export function assetUrl(path) {
 }
 
 export function getToken() {
-  return localStorage.getItem('token');
+  const token = localStorage.getItem('token');
+  authDebug('getToken', { hasToken: !!token, tokenLength: token?.length || 0, path: window.location.pathname });
+  return token;
 }
 export function setSession(token, user) {
   localStorage.setItem('token', token);
   localStorage.setItem('user', JSON.stringify(user));
+  authDebug('setSession', { hasToken: !!token, tokenLength: token?.length || 0, username: user?.username || null, role: user?.role || null });
 }
 export function getUser() {
   try {
@@ -28,10 +41,13 @@ export function getUser() {
 export function clearSession() {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
+  authDebug('clearSession', { path: window.location.pathname });
 }
 
 export async function api(path, options = {}) {
-  const res = await fetch(BASE + path, {
+  const requestUrl = BASE + path;
+  authDebug('api:request', { path, requestUrl, method: options.method || 'GET', hasToken: !!getToken() });
+  const res = await fetch(requestUrl, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -41,6 +57,7 @@ export async function api(path, options = {}) {
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
+  authDebug('api:response', { path, requestUrl, status: res.status, ok: res.ok, payloadError: data.error || null });
   if (res.status === 401) {
     clearSession();
     window.location.href = '/login';
@@ -53,6 +70,9 @@ export async function api(path, options = {}) {
   if (!res.ok) {
     const err = new Error(data.error || 'Erro inesperado.');
     err.status = res.status;
+    err.path = path;
+    err.url = requestUrl;
+    err.payload = data;
     throw err;
   }
   return data;
