@@ -884,7 +884,7 @@ button.stat { font: inherit; text-align: left; cursor: pointer; width: 100%; }
 .ocr-queue-item .q-status-uploading,
 .ocr-queue-item .q-status-queued { color: var(--muted); }
 .ocr-queue-item .q-status-processing { color: var(--primary); animation: ocr-pulse 1s ease-in-out infinite; }
-.ocr-queue-item .q-status-done,
+.ocr-queue-item .q-status-done { color: var(--primary); }
 .ocr-queue-item .q-status-applied { color: var(--success); }
 .ocr-queue-item .q-status-error { color: var(--danger); }
 @keyframes ocr-pulse {

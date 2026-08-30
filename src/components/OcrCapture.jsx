@@ -7,7 +7,8 @@ const STATUS_ICONS = {
   uploading: 'hourglass_top',
   queued: 'hourglass_top',
   processing: 'sync',
-  done: 'check_circle',
+  done: 'task_alt',
+  applied: 'check_circle',
   error: 'error',
 };
 
@@ -15,36 +16,19 @@ const STATUS_LABELS = {
   uploading: 'Enviando...',
   queued: 'Na fila...',
   processing: 'Processando...',
-  done: 'Concluído',
-  applied: 'Cadastrado',
+  done: 'Pronto — confirme',
+  applied: 'Confirmado',
   error: 'Erro',
 };
-
-function loadAutoApply() {
-  try {
-    return localStorage.getItem('ocrAutoApply') !== '0';
-  } catch {
-    return true;
-  }
-}
 
 export default function OcrCapture({ open, onClose, onResult, file }) {
   const [jobs, setJobs] = useState([]);
   const [activeJobId, setActiveJobId] = useState(null);
   const [error, setError] = useState('');
   const [listSelected, setListSelected] = useState({});
-  const [autoApply, setAutoApply] = useState(loadAutoApply);
   const inputRef = useRef(null);
   const counterRef = useRef(0);
-  const autoApplyRef = useRef(autoApply);
   const appliedRef = useRef(new Set());
-
-  useEffect(() => {
-    autoApplyRef.current = autoApply;
-    try {
-      localStorage.setItem('ocrAutoApply', autoApply ? '1' : '0');
-    } catch {}
-  }, [autoApply]);
 
   const activeJob = jobs.find((j) => j.jobId === activeJobId);
   const busy = activeJob && ['uploading', 'queued', 'processing'].includes(activeJob.status);
@@ -102,26 +86,6 @@ export default function OcrCapture({ open, onClose, onResult, file }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [file]);
 
-  async function applyJobResult(job) {
-    if (appliedRef.current.has(job.jobId)) return;
-    appliedRef.current.add(job.jobId);
-    if (job.voters) {
-      onResult({ type: 'lista', voters: job.voters });
-    } else {
-      onResult({
-        nome: job.parsed?.nome || '',
-        zona: job.parsed?.zona || '',
-        secao: job.parsed?.secao || '',
-        titleNumber: job.parsed?.titleNumber || '',
-      });
-    }
-    updateJob(job.jobId, { applied: true });
-    if (activeJobId === job.jobId) {
-      setActiveJobId(null);
-      setListSelected({});
-    }
-  }
-
   // polling de TODOS os jobs pendentes (não só o ativo)
   useEffect(() => {
     const pending = jobs.filter(
@@ -148,16 +112,6 @@ export default function OcrCapture({ open, onClose, onResult, file }) {
               const sel = {};
               voters.forEach((_, i) => { sel[i] = true; });
               setListSelected((prev) => ({ ...sel, ...prev }));
-            }
-            const finished = {
-              ...targetJob,
-              status: 'done',
-              parsed: d.job.result?.fields || {},
-              voters,
-              aiUsed: !!d.job.result?.aiUsed,
-            };
-            if (autoApplyRef.current) {
-              await applyJobResult(finished);
             }
           } else if (st === 'error') {
             updateJob(targetJob.jobId, {
@@ -231,18 +185,6 @@ export default function OcrCapture({ open, onClose, onResult, file }) {
         }}
       />
 
-      <label className="card" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 10, marginBottom: 12, cursor: 'pointer' }}>
-        <input
-          type="checkbox"
-          checked={autoApply}
-          onChange={(e) => setAutoApply(e.target.checked)}
-        />
-        <div className="meta" style={{ flex: 1, fontSize: '0.8rem' }}>
-          <strong>Cadastro automático</strong><br />
-          Cadastra o eleitor assim que a foto terminar de ler, sem confirmar.
-        </div>
-      </label>
-
       {jobs.length > 0 && (
         <div className="ocr-queue">
           {jobs.map((job, idx) => (
@@ -253,7 +195,7 @@ export default function OcrCapture({ open, onClose, onResult, file }) {
               onClick={() => setActiveJobId(job.jobId)}
             >
               <span className={`q-status q-status-${job.applied ? 'applied' : job.status}`}>
-                <Icon name={STATUS_ICONS[job.status] || 'help'} size={18} />
+                <Icon name={job.applied ? 'check_circle' : (STATUS_ICONS[job.status] || 'help')} size={18} />
               </span>
               <div className="q-info">
                 <div className="q-filename">
@@ -283,9 +225,7 @@ export default function OcrCapture({ open, onClose, onResult, file }) {
             {activeJob?.status === 'processing' && 'Lendo o título...'}
           </div>
           <div className="meta" style={{ marginBottom: 12 }}>
-            {autoApply
-              ? 'Quando terminar, o eleitor é cadastrado automaticamente.'
-              : 'Pode levar até 1 minuto. Você pode enviar outra foto enquanto processa.'}
+            Pode levar até 1 minuto. Você pode enviar outra foto enquanto processa.
           </div>
           <div className="ocr-progress"><div className="ocr-progress-fill" /></div>
           <button
@@ -396,7 +336,7 @@ export default function OcrCapture({ open, onClose, onResult, file }) {
       {activeJob?.status === 'done' && activeJob.applied && (
         <div>
           <div className="alert success">
-            Cadastrado automaticamente{activeJob.voters ? ` (${activeJob.voters.length} eleitor(es))` : ''}. Confira na lista de eleitores.
+            Cadastrado com sucesso{activeJob.voters ? ` (${activeJob.voters.length} eleitor(es))` : ''}. Confira na lista de eleitores.
           </div>
           <div className="row-actions">
             <button className="btn secondary" onClick={() => inputRef.current?.click()}>
@@ -426,7 +366,7 @@ export default function OcrCapture({ open, onClose, onResult, file }) {
       {!activeJob && !busy && jobs.length > 0 && (
         <div style={{ textAlign: 'center', padding: '8px 0' }}>
           <div className="meta" style={{ marginBottom: 12 }}>
-            {appliedCount} de {jobs.length} foto(s) cadastrada(s). Toque em um item acima para ver o resultado.
+            {appliedCount} de {jobs.length} foto(s) cadastrada(s). Toque em um item acima para confirmar.
           </div>
           <button type="button" className="btn secondary" onClick={() => inputRef.current?.click()}>
             <Icon name="add_a_photo" size={18} /> Enviar mais fotos
