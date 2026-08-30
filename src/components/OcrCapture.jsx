@@ -274,8 +274,8 @@ export default function OcrCapture({ open, onClose, onResult, file }) {
                   onChange={() => toggleListSelect(i)}
                 />
                 <div className="meta" style={{ flex: 1, fontSize: '0.8rem' }}>
-                  <strong>{i + 1}. {v.nome || '—'}</strong><br />
-                  Tel: {v.telefone || '—'} · Título: {v.titleNumber || '—'}<br />
+                  <strong>{i + 1}. {v.nome || '—'}</strong>{v.titleValid === false ? ' ⚠️' : ''}<br />
+                  Tel: {v.telefone || '—'} · Título: {v.titleNumber || '—'}{v.titleValid === false ? ' (confira o nº)' : ''}<br />
                   Seção: {v.secao || '—'} · Zona: {v.zona || '—'}{v.bairro ? ` · ${v.bairro}` : ''}
                 </div>
               </label>
