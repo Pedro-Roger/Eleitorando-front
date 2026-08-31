@@ -26,6 +26,8 @@ export default function OcrCapture({ open, onClose, onResult, file }) {
   const [activeJobId, setActiveJobId] = useState(null);
   const [error, setError] = useState('');
   const [listSelected, setListSelected] = useState({});
+  const [editingIdx, setEditingIdx] = useState(null);
+  const [editDraft, setEditDraft] = useState(null);
   const inputRef = useRef(null);
   const counterRef = useRef(0);
   const appliedRef = useRef(new Set());
@@ -50,6 +52,8 @@ export default function OcrCapture({ open, onClose, onResult, file }) {
     ]);
     setActiveJobId(tempId);
     setListSelected({});
+    setEditingIdx(null);
+    setEditDraft(null);
 
     if (file.type === 'application/pdf') {
       uploadJob(tempId, file);
@@ -154,10 +158,34 @@ export default function OcrCapture({ open, onClose, onResult, file }) {
     setListSelected((prev) => ({ ...prev, [i]: !prev[i] }));
   }
 
+  function startEdit(i) {
+    setEditingIdx(i);
+    setEditDraft({ ...activeJob.voters[i] });
+  }
+
+  function updateDraft(field, value) {
+    setEditDraft((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function saveEdit() {
+    if (!activeJob || editDraft == null || editingIdx == null) return;
+    const next = activeJob.voters.map((v, i) => (i === editingIdx ? { ...v, ...editDraft } : v));
+    updateJob(activeJob.jobId, { voters: next });
+    setEditingIdx(null);
+    setEditDraft(null);
+  }
+
+  function cancelEdit() {
+    setEditingIdx(null);
+    setEditDraft(null);
+  }
+
   function resetCurrent() {
     setActiveJobId(null);
     setError('');
     setListSelected({});
+    setEditingIdx(null);
+    setEditDraft(null);
   }
 
   function handleClose() {
@@ -165,6 +193,8 @@ export default function OcrCapture({ open, onClose, onResult, file }) {
     setActiveJobId(null);
     setError('');
     setListSelected({});
+    setEditingIdx(null);
+    setEditDraft(null);
     appliedRef.current = new Set();
     onClose();
   }
@@ -259,26 +289,75 @@ export default function OcrCapture({ open, onClose, onResult, file }) {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
             {activeJob.voters.map((v, i) => (
-              <label
+              <div
                 key={i}
                 className="card"
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: 10, cursor: 'pointer',
+                  display: 'flex', alignItems: 'flex-start', gap: 10,
+                  padding: 10,
                   opacity: listSelected[i] === false ? 0.5 : 1,
+                  borderColor: editingIdx === i ? 'var(--primary)' : undefined,
                 }}
               >
                 <input
                   type="checkbox"
+                  style={{ marginTop: 3 }}
                   checked={listSelected[i] !== false}
                   onChange={() => toggleListSelect(i)}
                 />
-                <div className="meta" style={{ flex: 1, fontSize: '0.8rem' }}>
-                  <strong>{i + 1}. {v.nome || '—'}</strong>{v.titleValid === false ? ' ⚠️' : ''}<br />
-                  Tel: {v.telefone || '—'} · Título: {v.titleNumber || '—'}{v.titleValid === false ? ' (confira o nº)' : ''}<br />
-                  Seção: {v.secao || '—'} · Zona: {v.zona || '—'}{v.bairro ? ` · ${v.bairro}` : ''}
-                </div>
-              </label>
+                {editingIdx === i ? (
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {[
+                      ['nome', 'Nome'],
+                      ['telefone', 'Telefone'],
+                      ['titleNumber', 'Nº Título'],
+                      ['secao', 'Seção'],
+                      ['zona', 'Zona'],
+                      ['bairro', 'Bairro'],
+                    ].map(([field, label]) => (
+                      <label key={field} style={{ display: 'block', fontSize: '0.72rem', color: 'var(--muted)', fontWeight: 600 }}>
+                        {label}
+                        <input
+                          type="text"
+                          value={editDraft?.[field] || ''}
+                          onChange={(e) => updateDraft(field, e.target.value)}
+                          style={{
+                            width: '100%', marginTop: 2, padding: '6px 8px',
+                            fontSize: '0.85rem', border: '1px solid var(--border)',
+                            borderRadius: 6, background: 'var(--surface)',
+                            color: 'var(--text)',
+                          }}
+                        />
+                      </label>
+                    ))}
+                    <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                      <button type="button" className="btn" style={{ padding: '6px 14px', fontSize: '0.8rem' }} onClick={saveEdit}>
+                        Salvar
+                      </button>
+                      <button type="button" className="btn secondary" style={{ padding: '6px 14px', fontSize: '0.8rem' }} onClick={cancelEdit}>
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="meta" style={{ flex: 1, fontSize: '0.8rem' }}>
+                      <strong>{i + 1}. {v.nome || '—'}</strong>{v.titleValid === false ? ' ⚠️' : ''}<br />
+                      Tel: {v.telefone || '—'} · Título: {v.titleNumber || '—'}{v.titleValid === false ? ' (confira o nº)' : ''}<br />
+                      Seção: {v.secao || '—'} · Zona: {v.zona || '—'}{v.bairro ? ` · ${v.bairro}` : ''}
+                    </div>
+                    <button
+                      type="button"
+                      className="btn secondary"
+                      style={{ padding: '6px 10px', fontSize: '0.75rem', flexShrink: 0 }}
+                      onClick={() => startEdit(i)}
+                      title="Editar dados lidos"
+                    >
+                      <Icon name="edit" size={16} /> Editar
+                    </button>
+                  </>
+                )}
+              </div>
             ))}
           </div>
           <div className="row-actions">
