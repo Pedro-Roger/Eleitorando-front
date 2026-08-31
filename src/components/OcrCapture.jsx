@@ -331,10 +331,10 @@ export default function OcrCapture({ open, onClose, onResult, file }) {
                       </label>
                     ))}
                     <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-                      <button type="button" className="btn" style={{ padding: '6px 14px', fontSize: '0.8rem' }} onClick={saveEdit}>
+                      <button type="button" className="btn" style={{ width: 'auto', minHeight: 36, padding: '6px 14px', fontSize: '0.8rem' }} onClick={saveEdit}>
                         Salvar
                       </button>
-                      <button type="button" className="btn secondary" style={{ padding: '6px 14px', fontSize: '0.8rem' }} onClick={cancelEdit}>
+                      <button type="button" className="btn secondary" style={{ width: 'auto', minHeight: 36, padding: '6px 14px', fontSize: '0.8rem' }} onClick={cancelEdit}>
                         Cancelar
                       </button>
                     </div>
@@ -349,7 +349,7 @@ export default function OcrCapture({ open, onClose, onResult, file }) {
                     <button
                       type="button"
                       className="btn secondary"
-                      style={{ padding: '6px 10px', fontSize: '0.75rem', flexShrink: 0 }}
+                      style={{ width: 'auto', minHeight: 36, padding: '6px 12px', fontSize: '0.75rem', flexShrink: 0, whiteSpace: 'nowrap', alignSelf: 'center' }}
                       onClick={() => startEdit(i)}
                       title="Editar dados lidos"
                     >
