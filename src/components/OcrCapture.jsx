@@ -144,6 +144,8 @@ export default function OcrCapture({ open, onClose, onResult, file }) {
     } else {
       onResult({
         nome: activeJob.parsed.nome || '',
+        gender: activeJob.parsed.gender || '',
+        age: activeJob.parsed.age || '',
         zona: activeJob.parsed.zona || '',
         secao: activeJob.parsed.secao || '',
         titleNumber: activeJob.parsed.titleNumber || '',
@@ -169,8 +171,12 @@ export default function OcrCapture({ open, onClose, onResult, file }) {
 
   function saveEdit() {
     if (!activeJob || editDraft == null || editingIdx == null) return;
-    const next = activeJob.voters.map((v, i) => (i === editingIdx ? { ...v, ...editDraft } : v));
-    updateJob(activeJob.jobId, { voters: next });
+    if (editingIdx === 'single') {
+      updateJob(activeJob.jobId, { parsed: { ...activeJob.parsed, ...editDraft } });
+    } else {
+      const next = activeJob.voters.map((v, i) => (i === editingIdx ? { ...v, ...editDraft } : v));
+      updateJob(activeJob.jobId, { voters: next });
+    }
     setEditingIdx(null);
     setEditDraft(null);
   }
@@ -310,6 +316,7 @@ export default function OcrCapture({ open, onClose, onResult, file }) {
                     {[
                       ['nome', 'Nome'],
                       ['telefone', 'Telefone'],
+                      ['gender', 'Gênero (M/F)'],
                       ['titleNumber', 'Nº Título'],
                       ['secao', 'Seção'],
                       ['zona', 'Zona'],
@@ -343,7 +350,8 @@ export default function OcrCapture({ open, onClose, onResult, file }) {
                   <>
                     <div className="meta" style={{ flex: 1, fontSize: '0.8rem' }}>
                       <strong>{i + 1}. {v.nome || '—'}</strong>{v.titleValid === false ? ' ⚠️' : ''}<br />
-                      Tel: {v.telefone || '—'} · Título: {v.titleNumber || '—'}{v.titleValid === false ? ' (confira o nº)' : ''}<br />
+                      Gênero: {v.gender || '—'} · Tel: {v.telefone || '—'}<br />
+                      Título: {v.titleNumber || '—'}{v.titleValid === false ? ' (confira o nº)' : ''}<br />
                       Seção: {v.secao || '—'} · Zona: {v.zona || '—'}{v.bairro ? ` · ${v.bairro}` : ''}
                     </div>
                     <button
@@ -390,13 +398,63 @@ export default function OcrCapture({ open, onClose, onResult, file }) {
           <div className="alert success">
             Dados extraídos{activeJob.aiUsed ? ' com ajuda da IA' : ''}. Confira antes de salvar.
           </div>
-          <div className="card" style={{ padding: 10, marginBottom: 12 }}>
-            <div className="meta" style={{ fontSize: '0.85rem' }}>
-              <strong>Nome:</strong> {activeJob.parsed?.nome || '—'}<br />
-              <strong>Zona:</strong> {activeJob.parsed?.zona || '—'}<br />
-              <strong>Seção:</strong> {activeJob.parsed?.secao || '—'}<br />
-              <strong>Nº Título:</strong> {activeJob.parsed?.titleNumber || '—'}
-            </div>
+          <div className="card" style={{ padding: 10, marginBottom: 12, display: 'flex', alignItems: 'flex-start', gap: 10, borderColor: editingIdx === 'single' ? 'var(--primary)' : undefined }}>
+            {editingIdx === 'single' ? (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {[
+                  ['nome', 'Nome'],
+                  ['gender', 'Gênero (M/F)'],
+                  ['age', 'Idade'],
+                  ['titleNumber', 'Nº Título'],
+                  ['secao', 'Seção'],
+                  ['zona', 'Zona'],
+                ].map(([field, label]) => (
+                  <label key={field} style={{ display: 'block', fontSize: '0.72rem', color: 'var(--muted)', fontWeight: 600 }}>
+                    {label}
+                    <input
+                      type="text"
+                      value={editDraft?.[field] || ''}
+                      onChange={(e) => updateDraft(field, e.target.value)}
+                      style={{
+                        width: '100%', marginTop: 2, padding: '6px 8px',
+                        fontSize: '0.85rem', border: '1px solid var(--border)',
+                        borderRadius: 6, background: 'var(--surface)',
+                        color: 'var(--text)',
+                      }}
+                    />
+                  </label>
+                ))}
+                <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                  <button type="button" className="btn" style={{ width: 'auto', minHeight: 36, padding: '6px 14px', fontSize: '0.8rem' }} onClick={saveEdit}>
+                    Salvar
+                  </button>
+                  <button type="button" className="btn secondary" style={{ width: 'auto', minHeight: 36, padding: '6px 14px', fontSize: '0.8rem' }} onClick={cancelEdit}>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="meta" style={{ flex: 1, fontSize: '0.85rem' }}>
+                  <strong>Nome:</strong> {activeJob.parsed?.nome || '—'}<br />
+                  <strong>Gênero:</strong> {activeJob.parsed?.gender || '—'} · <strong>Idade:</strong> {activeJob.parsed?.age || '—'}<br />
+                  <strong>Zona:</strong> {activeJob.parsed?.zona || '—'} · <strong>Seção:</strong> {activeJob.parsed?.secao || '—'}<br />
+                  <strong>Nº Título:</strong> {activeJob.parsed?.titleNumber || '—'}
+                </div>
+                <button
+                  type="button"
+                  className="btn secondary"
+                  style={{ width: 'auto', minHeight: 36, padding: '6px 12px', fontSize: '0.75rem', flexShrink: 0, whiteSpace: 'nowrap', alignSelf: 'center' }}
+                  onClick={() => {
+                    setEditingIdx('single');
+                    setEditDraft({ ...activeJob.parsed });
+                  }}
+                  title="Editar dados lidos"
+                >
+                  <Icon name="edit" size={16} /> Editar
+                </button>
+              </>
+            )}
           </div>
           <div className="row-actions">
             <button className="btn" onClick={handleApply}>

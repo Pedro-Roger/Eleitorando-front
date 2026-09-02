@@ -377,7 +377,7 @@ export default function Voters() {
                     state: 'CE',
                     city: '',
                     neighborhood: v.bairro || '',
-                    gender: '',
+                    gender: v.gender || '',
                     age: '',
                     zone: v.zona || '',
                     section: v.secao || '',
@@ -403,8 +403,8 @@ export default function Voters() {
                 state: 'CE',
                 city: '',
                 neighborhood: '',
-                gender: '',
-                age: '',
+                gender: fields.gender || '',
+                age: fields.age || '',
                 zone: fields.zona || '',
                 section: fields.secao || '',
                 titleNumber: fields.titleNumber || '',
@@ -422,7 +422,7 @@ export default function Voters() {
 
       <BottomSheet open={open} onClose={() => setOpen(false)} title="Novo Eleitor">
         <VoterForm
-          initial={ocrResult ? { name: ocrResult.nome, zone: ocrResult.zona, section: ocrResult.secao, titleNumber: ocrResult.titleNumber } : undefined}
+          initial={ocrResult ? { name: ocrResult.nome, gender: ocrResult.gender, age: ocrResult.age, zone: ocrResult.zona, section: ocrResult.secao, titleNumber: ocrResult.titleNumber } : undefined}
           onSubmit={handleCreate}
           submitting={saving}
           error={formError}
