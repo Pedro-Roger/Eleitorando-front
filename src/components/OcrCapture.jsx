@@ -21,6 +21,22 @@ const STATUS_LABELS = {
   error: 'Erro',
 };
 
+function getReviewFields(result = {}) {
+  return result.reviewDraft?.fields || result.fields || result.rawResult?.fields || {};
+}
+
+function getJobVoters(result = {}) {
+  return Array.isArray(result.reviewDraft?.voters)
+    ? result.reviewDraft.voters
+    : Array.isArray(result.voters)
+      ? result.voters
+      : null;
+}
+
+function isReviewReadyStatus(status) {
+  return ['review_required', 'done', 'completed', 'confirmed'].includes(status);
+}
+
 export default function OcrCapture({ open, onClose, onResult, file }) {
   const [jobs, setJobs] = useState([]);
   const [activeJobId, setActiveJobId] = useState(null);
@@ -104,13 +120,14 @@ export default function OcrCapture({ open, onClose, onResult, file }) {
           const st = d.job?.status;
           if (st === 'processing') {
             updateJob(targetJob.jobId, { status: 'processing' });
-          } else if (st === 'done') {
-            const voters = Array.isArray(d.job.result?.voters) ? d.job.result.voters : null;
+          } else if (isReviewReadyStatus(st)) {
+            const result = d.job.result || {};
+            const voters = getJobVoters(result);
             updateJob(targetJob.jobId, {
               status: 'done',
-              parsed: d.job.result?.fields || {},
+              parsed: getReviewFields(result),
               voters,
-              aiUsed: !!d.job.result?.aiUsed,
+              aiUsed: !!(result.aiUsed || result.modelUsed),
             });
             if (voters) {
               const sel = {};
