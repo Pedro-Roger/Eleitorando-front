@@ -51,3 +51,13 @@ test('interactive Stitch components keep keyboard and form semantics', () => {
 test('voter search ignores stale responses', () => {
   assert.match(read('src/pages/Voters.jsx'), /loadRequest\.current/);
 });
+
+test('duplicate voter conflicts use the explanatory modal', () => {
+  const voters = read('src/pages/Voters.jsx');
+
+  assert.match(voters, /duplicateError/);
+  assert.match(voters, /Telefone já cadastrado/);
+  assert.match(voters, /Título já cadastrado/);
+  assert.match(voters, /if \(!showDuplicateError\(err\)\) setFormError\(err\.message\)/);
+  assert.match(voters, /if \(!showDuplicateError\(err\)\) setEditError\(err\.message\)/);
+});

@@ -33,7 +33,7 @@ export default function Voters() {
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState('');
   const [toDelete, setToDelete] = useState(null);
-  const [dupPhone, setDupPhone] = useState(false);
+  const [duplicateError, setDuplicateError] = useState(null);
   const [ocrOpen, setOcrOpen] = useState(false);
   const [ocrResult, setOcrResult] = useState(null);
   const [ocrFile, setOcrFile] = useState(null);
@@ -133,6 +133,24 @@ export default function Voters() {
     setTimeout(() => setSuccess(''), 3500);
   }
 
+  function showDuplicateError(err) {
+    if (err.status !== 409) return false;
+    const message = String(err.message || '');
+    if (message.includes('título')) {
+      setDuplicateError({
+        title: 'Título já cadastrado',
+        description: 'Já existe um eleitor cadastrado com este número de título. Cada título pertence a um único eleitor, então revise o número ou procure o cadastro existente na busca.',
+      });
+      return true;
+    }
+
+    setDuplicateError({
+      title: 'Telefone já cadastrado',
+      description: 'Já existe um eleitor cadastrado com este número de telefone. Verifique o número digitado ou procure o eleitor na busca antes de cadastrar novamente.',
+    });
+    return true;
+  }
+
   async function handleCreate(formValues) {
     setSaving(true);
     setFormError('');
@@ -142,9 +160,7 @@ export default function Voters() {
       flash(data.message);
       load(search);
     } catch (err) {
-      if (err.status === 409 && String(err.message).includes('título')) setFormError(err.message);
-      else if (err.status === 409) setDupPhone(true);
-      else setFormError(err.message);
+      if (!showDuplicateError(err)) setFormError(err.message);
     } finally {
       setSaving(false);
     }
@@ -159,9 +175,7 @@ export default function Voters() {
       flash(data.message);
       load(search);
     } catch (err) {
-      if (err.status === 409 && String(err.message).includes('título')) setEditError(err.message);
-      else if (err.status === 409) setDupPhone(true);
-      else setEditError(err.message);
+      if (!showDuplicateError(err)) setEditError(err.message);
     } finally {
       setEditSaving(false);
     }
@@ -386,7 +400,8 @@ export default function Voters() {
                   },
                 });
                 ok += 1;
-              } catch {
+              } catch (err) {
+                showDuplicateError(err);
                 fail += 1;
               }
             }
@@ -414,7 +429,7 @@ export default function Voters() {
             flash('Eleitor cadastrado via OCR.');
             load(search);
           } catch (e) {
-            flash(`Falha ao cadastrar: ${e.message}`);
+            if (!showDuplicateError(e)) flash(`Falha ao cadastrar: ${e.message}`);
           }
         }}
         file={ocrFile}
@@ -476,10 +491,10 @@ export default function Voters() {
       </BottomSheet>
 
       <AlertDialog
-        open={dupPhone}
-        onClose={() => setDupPhone(false)}
-        title="Telefone já cadastrado"
-        description="Já existe um eleitor cadastrado com este número de telefone. Verifique o número ou procure o eleitor na busca."
+        open={!!duplicateError}
+        onClose={() => setDuplicateError(null)}
+        title={duplicateError?.title}
+        description={duplicateError?.description}
       />
 
       <ConfirmDialog

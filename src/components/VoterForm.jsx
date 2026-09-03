@@ -3,13 +3,14 @@ import StateCitySelect from './StateCitySelect';
 import Icon from './Icon';
 import OcrCapture from './OcrCapture';
 import { api } from '../lib/api';
+import { parseVoterText } from '../lib/voterTextParser';
 
 const GENDERS = ['Feminino', 'Masculino', 'Outro', 'Prefere não informar'];
 
 // Formulário de cadastro/edição de eleitor — reutilizado tanto no "Novo Eleitor"
 // quanto na edição de um eleitor já existente (initial preenchido).
 export default function VoterForm({ initial, onSubmit, submitting, error, submitLabel = 'Salvar Cadastro' }) {
-const [form, setForm] = useState({
+  const [form, setForm] = useState({
     name: initial?.name || '',
     phone: initial?.phone || '',
     state: initial?.state || 'CE',
@@ -26,6 +27,9 @@ const [form, setForm] = useState({
   const [reverseMatches, setReverseMatches] = useState([]);
   const [ocrOpen, setOcrOpen] = useState(false);
   const [ocrFile, setOcrFile] = useState(null);
+  const [textImportOpen, setTextImportOpen] = useState(false);
+  const [textImport, setTextImport] = useState('');
+  const [textImportStatus, setTextImportStatus] = useState('');
   const ocrFileInputRef = useRef(null);
   const autoFilledRef = useRef({ city: false, neighborhood: false });
 
@@ -99,6 +103,19 @@ const [form, setForm] = useState({
     setReverseMatches([]);
   }
 
+  function applyTextImport() {
+    const parsed = parseVoterText(textImport);
+    if (!Object.keys(parsed).length) {
+      setTextImportStatus('Nenhum campo reconhecido.');
+      return;
+    }
+
+    setForm((f) => ({ ...f, ...parsed }));
+    autoFilledRef.current.city = false;
+    autoFilledRef.current.neighborhood = false;
+    setTextImportStatus(`${Object.keys(parsed).length} campo(s) preenchido(s).`);
+  }
+
   return (
     <form
       onSubmit={(e) => {
@@ -107,6 +124,50 @@ const [form, setForm] = useState({
       }}
     >
       {error && <div className="alert error">{error}</div>}
+
+      <div className="row-actions" style={{ marginTop: 0, marginBottom: 12 }}>
+        <button
+          type="button"
+          className="btn secondary"
+          onClick={() => {
+            setTextImportOpen((open) => !open);
+            setTextImportStatus('');
+          }}
+        >
+          <Icon name="content_paste" size={16} /> Colar texto
+        </button>
+      </div>
+
+      {textImportOpen && (
+        <div className="field">
+          <label>Texto do eleitor</label>
+          <textarea
+            rows={7}
+            value={textImport}
+            onChange={(e) => {
+              setTextImport(e.target.value);
+              setTextImportStatus('');
+            }}
+            placeholder={'nome completo: Nayele Rabelo Paulino\nCelular: 85921723287\nIdade: 21\nGênero: feminino\nCidade: Fortaleza\nBairro: Maraponga\nZona eleitoral: 118\nSeção: 0116'}
+          />
+          <div className="row-actions">
+            <button type="button" className="btn secondary" onClick={applyTextImport}>
+              <Icon name="auto_fix_high" size={16} /> Preencher
+            </button>
+            <button
+              type="button"
+              className="btn secondary"
+              onClick={() => {
+                setTextImport('');
+                setTextImportStatus('');
+              }}
+            >
+              <Icon name="close" size={16} /> Limpar
+            </button>
+          </div>
+          {textImportStatus && <div className="hint">{textImportStatus}</div>}
+        </div>
+      )}
 
       <h3 className="form-section-title">Dados Pessoais</h3>
       <div className="field">
