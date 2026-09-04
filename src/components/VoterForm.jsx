@@ -9,7 +9,7 @@ const GENDERS = ['Feminino', 'Masculino', 'Outro', 'Prefere não informar'];
 
 // Formulário de cadastro/edição de eleitor — reutilizado tanto no "Novo Eleitor"
 // quanto na edição de um eleitor já existente (initial preenchido).
-export default function VoterForm({ initial, onSubmit, submitting, error, submitLabel = 'Salvar Cadastro' }) {
+export default function VoterForm({ initial, onSubmit, onSubmitMultiple, submitting, error, submitLabel = 'Salvar Cadastro' }) {
   const [form, setForm] = useState({
     name: initial?.name || '',
     phone: initial?.phone || '',
@@ -104,16 +104,25 @@ export default function VoterForm({ initial, onSubmit, submitting, error, submit
   }
 
   function applyTextImport() {
-    const parsed = parseVoterText(textImport);
-    if (!Object.keys(parsed).length) {
+    const parsedList = parseVoterText(textImport);
+    if (!parsedList || !parsedList.length) {
       setTextImportStatus('Nenhum campo reconhecido.');
       return;
     }
 
-    setForm((f) => ({ ...f, ...parsed }));
-    autoFilledRef.current.city = false;
-    autoFilledRef.current.neighborhood = false;
-    setTextImportStatus(`${Object.keys(parsed).length} campo(s) preenchido(s).`);
+    if (parsedList.length === 1) {
+      const parsed = parsedList[0];
+      setForm((f) => ({ ...f, ...parsed }));
+      autoFilledRef.current.city = false;
+      autoFilledRef.current.neighborhood = false;
+      setTextImportStatus(`${Object.keys(parsed).length} campo(s) preenchido(s).`);
+    } else {
+      if (onSubmitMultiple) {
+        onSubmitMultiple(parsedList);
+      } else {
+        setTextImportStatus(`Foram encontrados ${parsedList.length} eleitores, mas não é possível salvar múltiplos aqui.`);
+      }
+    }
   }
 
   return (

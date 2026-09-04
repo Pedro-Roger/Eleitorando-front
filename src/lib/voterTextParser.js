@@ -48,7 +48,8 @@ function cleanValue(field, value) {
 }
 
 export function parseVoterText(text) {
-  const result = {};
+  const voters = [];
+  let currentVoter = {};
 
   for (const line of String(text || '').split(/\r?\n/)) {
     const match = line.match(/^\s*([^:]+)\s*:\s*(.*?)\s*$/);
@@ -58,8 +59,18 @@ export function parseVoterText(text) {
     if (!field) continue;
 
     const value = cleanValue(field, match[2]);
-    if (value) result[field] = value;
+    if (value) {
+      if (currentVoter[field] !== undefined) {
+        voters.push(currentVoter);
+        currentVoter = {};
+      }
+      currentVoter[field] = value;
+    }
   }
 
-  return result;
+  if (Object.keys(currentVoter).length > 0) {
+    voters.push(currentVoter);
+  }
+
+  return voters;
 }

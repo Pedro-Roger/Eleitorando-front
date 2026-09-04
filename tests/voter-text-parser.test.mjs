@@ -22,7 +22,7 @@ Zona eleitoral: 118
 Seção: 0116
 `);
 
-  assert.deepEqual(parsed, {
+  assert.deepEqual(parsed, [{
     name: 'Nayele Rabelo Paulino',
     phone: '85921723287',
     age: '21',
@@ -31,7 +31,7 @@ Seção: 0116
     neighborhood: 'Maraponga',
     zone: '118',
     section: '0116',
-  });
+  }]);
 });
 
 test('keeps unknown and empty labels out of the result', () => {
@@ -42,8 +42,95 @@ Telefone: (85) 92172-3287
 Zona: 118
 `);
 
-  assert.deepEqual(parsed, {
+  assert.deepEqual(parsed, [{
     phone: '85921723287',
     zone: '118',
+  }]);
+});
+
+test('parses multiple voters separated by repeated fields', () => {
+  const parsed = parseVoterText(`
+1
+Nome completo: Alice
+Telefone: 85999999999
+2
+Nome completo: Bob
+Telefone: 85888888888
+  `);
+
+  assert.deepEqual(parsed, [
+    { name: 'Alice', phone: '85999999999' },
+    { name: 'Bob', phone: '85888888888' },
+  ]);
+});
+
+test('handles garbage, empty text, or random strings gracefully', () => {
+  assert.deepEqual(parseVoterText(''), []);
+  assert.deepEqual(parseVoterText(undefined), []);
+  assert.deepEqual(parseVoterText(null), []);
+  assert.deepEqual(parseVoterText('Apenas um texto solto\nOutra linha sem dois pontos'), []);
+});
+
+test('handles label variations, case insensitivity, and accents', () => {
+  const parsed = parseVoterText(`
+Nômé Cõmplêtô : Carlos
+ Cêlulár : 11999999999
+íDãdê: 30
+ Género: M
+Cidáde :  São Paulo 
+  bairrO: Centro
+    Zoná eléitoral: 123
+ Seçaõ: 456
+ títuló: 1234567890
+`);
+
+  assert.deepEqual(parsed, [{
+    name: 'Carlos',
+    phone: '11999999999',
+    age: '30',
+    gender: 'Masculino',
+    city: 'São Paulo',
+    neighborhood: 'Centro',
+    zone: '123',
+    section: '456',
+    titleNumber: '1234567890'
+  }]);
+});
+
+test('cleans numeric fields removing symbols and letters', () => {
+  const parsed = parseVoterText(`
+Nome: Zezinho
+Celular: (11) 9.8888-7777
+Idade: 25 anos
+Zona: 012a
+Seção: 034-b
+n titulo: 123.456.789-00
+`);
+
+  assert.deepEqual(parsed, [{
+    name: 'Zezinho',
+    phone: '11988887777',
+    age: '25',
+    zone: '012',
+    section: '034',
+    titleNumber: '12345678900'
+  }]);
+});
+
+test('normalizes gender variations correctly', () => {
+  const variations = [
+    { text: 'genero: f', expected: 'Feminino' },
+    { text: 'genero: FEMININO', expected: 'Feminino' },
+    { text: 'genero: fem', expected: 'Feminino' },
+    { text: 'genero: M', expected: 'Masculino' },
+    { text: 'genero: masc', expected: 'Masculino' },
+    { text: 'genero: Masculino', expected: 'Masculino' },
+    { text: 'genero: outro', expected: 'Outro' },
+    { text: 'genero: Nao informado', expected: 'Nao informado' }
+  ];
+
+  variations.forEach(({ text, expected }) => {
+    const parsed = parseVoterText(text);
+    assert.equal(parsed[0].gender, expected, `Failed for: ${text}`);
   });
 });
