@@ -103,8 +103,8 @@ export default function VoterForm({ initial, onSubmit, onSubmitMultiple, submitt
     setReverseMatches([]);
   }
 
-  function applyTextImport() {
-    const parsedList = parseVoterText(textImport);
+  function applyTextImport(text = textImport) {
+    const parsedList = parseVoterText(text);
     if (!parsedList || !parsedList.length) {
       setTextImportStatus('Nenhum campo reconhecido.');
       return;
@@ -156,6 +156,14 @@ export default function VoterForm({ initial, onSubmit, onSubmitMultiple, submitt
             onChange={(e) => {
               setTextImport(e.target.value);
               setTextImportStatus('');
+            }}
+            onPaste={(e) => {
+              // Reconhece na hora: deixa o navegador colar e processa o valor final
+              const el = e.currentTarget;
+              setTimeout(() => {
+                setTextImport(el.value);
+                applyTextImport(el.value);
+              }, 0);
             }}
             placeholder={'nome completo: Nayele Rabelo Paulino\nCelular: 85921723287\nIdade: 21\nGênero: feminino\nCidade: Fortaleza\nBairro: Maraponga\nZona eleitoral: 118\nSeção: 0116'}
           />

@@ -11,6 +11,9 @@ const LABELS = {
   'zona eleitoral': 'zone',
   secao: 'section',
   'n titulo': 'titleNumber',
+  'num titulo': 'titleNumber',
+  'numero titulo': 'titleNumber',
+  'numero do titulo': 'titleNumber',
   titulo: 'titleNumber',
 };
 
@@ -47,30 +50,49 @@ function cleanValue(field, value) {
   return trimmed;
 }
 
+// Campos de texto aceitam continuação na linha seguinte (ex.: nome quebrado
+// em duas linhas ao colar). Linhas sem ":" fora desse contexto são ignoradas.
+const TEXT_FIELDS = new Set(['name', 'city', 'neighborhood', 'notes']);
+
 export function parseVoterText(text) {
   const voters = [];
   let currentVoter = {};
+  let lastField = null;
 
-  for (const line of String(text || '').split(/\r?\n/)) {
-    const match = line.match(/^\s*([^:]+)\s*:\s*(.*?)\s*$/);
-    if (!match) continue;
+  function pushCurrent() {
+    if (Object.keys(currentVoter).length > 0) voters.push(currentVoter);
+    currentVoter = {};
+    lastField = null;
+  }
+
+  for (const rawLine of String(text || '').split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line) continue;
+
+    const match = line.match(/^([^:]+)\s*:\s*(.*?)\s*$/);
+    if (!match) {
+      if (lastField && TEXT_FIELDS.has(lastField) && currentVoter[lastField]) {
+        currentVoter[lastField] += ` ${line}`;
+      }
+      continue;
+    }
 
     const field = LABELS[normalizeLabel(match[1])];
-    if (!field) continue;
+    if (!field) {
+      lastField = null;
+      continue;
+    }
 
     const value = cleanValue(field, match[2]);
-    if (value) {
-      if (currentVoter[field] !== undefined) {
-        voters.push(currentVoter);
-        currentVoter = {};
-      }
-      currentVoter[field] = value;
+    if (!value) continue;
+
+    if (currentVoter[field] !== undefined) {
+      pushCurrent();
     }
+    currentVoter[field] = value;
+    lastField = field;
   }
 
-  if (Object.keys(currentVoter).length > 0) {
-    voters.push(currentVoter);
-  }
-
+  pushCurrent();
   return voters;
 }

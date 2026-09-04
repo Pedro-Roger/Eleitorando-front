@@ -117,6 +117,42 @@ n titulo: 123.456.789-00
   }]);
 });
 
+test('recognizes numero do titulo label and ignores endereco', () => {
+  const parsed = parseVoterText(`
+Nome completo: Maria de Fatima Xavier
+Fernandes
+Telefone: 85 92004-4903
+Título: 0965 5189 0728
+Seção: 440
+Zona: 115
+Bairro: Vila Peri
+Endereço: não preenchido
+`);
+
+  assert.deepEqual(parsed, [{
+    name: 'Maria de Fatima Xavier Fernandes',
+    phone: '85920044903',
+    titleNumber: '096551890728',
+    section: '440',
+    zone: '115',
+    neighborhood: 'Vila Peri',
+  }]);
+});
+
+test('recognizes numero do titulo variation from agreed format', () => {
+  const parsed = parseVoterText(`
+Nome completo: Nayele Rabelo Paulino
+numero do titulo: 2310823820831
+Celular: 85921723287
+`);
+
+  assert.deepEqual(parsed, [{
+    name: 'Nayele Rabelo Paulino',
+    titleNumber: '2310823820831',
+    phone: '85921723287',
+  }]);
+});
+
 test('normalizes gender variations correctly', () => {
   const variations = [
     { text: 'genero: f', expected: 'Feminino' },
