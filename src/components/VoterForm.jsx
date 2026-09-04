@@ -9,7 +9,7 @@ const GENDERS = ['Feminino', 'Masculino', 'Outro', 'Prefere não informar'];
 
 // Formulário de cadastro/edição de eleitor — reutilizado tanto no "Novo Eleitor"
 // quanto na edição de um eleitor já existente (initial preenchido).
-export default function VoterForm({ initial, onSubmit, onSubmitMultiple, submitting, error, submitLabel = 'Salvar Cadastro' }) {
+export default function VoterForm({ initial, onSubmit, onDraftsSaved, submitting, error, submitLabel = 'Salvar Cadastro' }) {
   const [form, setForm] = useState({
     name: initial?.name || '',
     phone: initial?.phone || '',
@@ -30,6 +30,11 @@ export default function VoterForm({ initial, onSubmit, onSubmitMultiple, submitt
   const [textImportOpen, setTextImportOpen] = useState(false);
   const [textImport, setTextImport] = useState('');
   const [textImportStatus, setTextImportStatus] = useState('');
+  // Rascunhos reconhecidos da colagem (múltiplos eleitores): ficam visíveis pra
+  // revisar/editar antes de salvar, em vez de salvar direto.
+  const [drafts, setDrafts] = useState([]);
+  const [editingDraft, setEditingDraft] = useState(null);
+  const [savingDrafts, setSavingDrafts] = useState(false);
   const ocrFileInputRef = useRef(null);
   const autoFilledRef = useRef({ city: false, neighborhood: false });
 
@@ -117,11 +122,99 @@ export default function VoterForm({ initial, onSubmit, onSubmitMultiple, submitt
       autoFilledRef.current.neighborhood = false;
       setTextImportStatus(`${Object.keys(parsed).length} campo(s) preenchido(s).`);
     } else {
-      if (onSubmitMultiple) {
-        onSubmitMultiple(parsedList);
-      } else {
-        setTextImportStatus(`Foram encontrados ${parsedList.length} eleitores, mas não é possível salvar múltiplos aqui.`);
-      }
+      setDrafts(parsedList);
+      setEditingDraft(null);
+      setTextImportStatus(`${parsedList.length} eleitores reconhecidos — clique em um para revisar e editar.`);
+    }
+  }
+
+  function cleanDraft(d) {
+    const out = {};
+    for (const [k, v] of Object.entries(d || {})) {
+      if (!k.startsWith('_')) out[k] = v;
+    }
+    return out;
+  }
+
+  function draftSummary(d) {
+    const parts = [];
+    if (d.phone) parts.push(d.phone);
+    if (d.titleNumber) parts.push(`Título ${d.titleNumber}`);
+    const zs = [d.zone ? `Z${d.zone}` : '', d.section ? `S${d.section}` : ''].filter(Boolean).join(' ');
+    if (zs) parts.push(zs);
+    return parts.join(' · ');
+  }
+
+  function toVoterPayload(d) {
+    return {
+      name: d.name || '',
+      phone: d.phone || '',
+      state: 'CE',
+      city: d.city || '',
+      neighborhood: d.neighborhood || '',
+      gender: d.gender || '',
+      age: d.age ?? '',
+      zone: d.zone || '',
+      section: d.section || '',
+      titleNumber: d.titleNumber || '',
+      notes: d.notes || '',
+    };
+  }
+
+  function editDraft(i) {
+    const d = drafts[i];
+    if (!d) return;
+    setForm((f) => ({ ...f, ...cleanDraft(d) }));
+    autoFilledRef.current.city = false;
+    autoFilledRef.current.neighborhood = false;
+    setEditingDraft(i);
+    setTextImportStatus(`Editando rascunho ${i + 1} no formulário abaixo.`);
+  }
+
+  function removeDraft(i) {
+    setDrafts((ds) => ds.filter((_, idx) => idx !== i));
+    setEditingDraft((cur) => {
+      if (cur === null) return null;
+      if (cur === i) return null;
+      return cur > i ? cur - 1 : cur;
+    });
+  }
+
+  async function saveSingleDraft(i, values) {
+    setSavingDrafts(true);
+    try {
+      await api('/voters', { method: 'POST', body: toVoterPayload(values) });
+      setDrafts((ds) => ds.filter((_, idx) => idx !== i));
+      setEditingDraft(null);
+      setTextImportStatus('Rascunho salvo.');
+      onDraftsSaved?.(1);
+    } catch (err) {
+      setDrafts((ds) => ds.map((d, idx) => (idx === i ? { ...d, _error: err.message || 'Falha ao salvar.' } : d)));
+    } finally {
+      setSavingDrafts(false);
+    }
+  }
+
+  async function saveAllDrafts() {
+    if (!drafts.length) return;
+    const merged = drafts.map((d, i) => (i === editingDraft ? { ...cleanDraft(d), ...form } : d));
+    setSavingDrafts(true);
+    try {
+      const res = await api('/voters/bulk', { method: 'POST', body: { voters: merged.map(toVoterPayload) } });
+      const remaining = (res.failed || []).map((f) => ({ ...merged[f.index], _error: f.error || 'Falha ao salvar.' }));
+      const saved = res.summary?.success ?? 0;
+      setDrafts(remaining);
+      setEditingDraft(null);
+      if (saved > 0) onDraftsSaved?.(saved);
+      setTextImportStatus(
+        remaining.length
+          ? `${saved} salvo(s), ${remaining.length} com erro — revise abaixo.`
+          : `${saved} eleitor(es) salvos.`
+      );
+    } catch (err) {
+      setTextImportStatus(`Falha ao salvar: ${err.message || err}`);
+    } finally {
+      setSavingDrafts(false);
     }
   }
 
@@ -129,7 +222,12 @@ export default function VoterForm({ initial, onSubmit, onSubmitMultiple, submitt
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        onSubmit(form);
+        // Editando um rascunho: salva só ele e continua na lista
+        if (editingDraft !== null) {
+          saveSingleDraft(editingDraft, form);
+        } else {
+          onSubmit(form);
+        }
       }}
     >
       {error && <div className="alert error">{error}</div>}
@@ -183,6 +281,46 @@ export default function VoterForm({ initial, onSubmit, onSubmitMultiple, submitt
             </button>
           </div>
           {textImportStatus && <div className="hint">{textImportStatus}</div>}
+          {drafts.length > 0 && (
+            <div className="field">
+              <label>Rascunhos reconhecidos ({drafts.length})</label>
+              {drafts.map((d, i) => (
+                <div key={i} className={`card${editingDraft === i ? '' : ' tappable'}`} style={{ marginBottom: 8 }}>
+                  <div className="card-row">
+                    <button type="button" className="card-button" onClick={() => editDraft(i)}>
+                      <div className="card-copy">
+                        <div className="card-title">{d.name || 'Sem nome'}</div>
+                        {draftSummary(d) && <div className="meta">{draftSummary(d)}</div>}
+                        {d._error && <div className="meta" style={{ color: 'var(--error, #B3261E)' }}>{d._error}</div>}
+                      </div>
+                    </button>
+                    <button type="button" className="btn secondary" onClick={() => removeDraft(i)} title="Descartar rascunho">
+                      <Icon name="close" size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <div className="row-actions">
+                <button type="button" className="btn" disabled={savingDrafts} onClick={saveAllDrafts}>
+                  <Icon name="save" size={18} />
+                  {savingDrafts ? 'Salvando...' : `Salvar todos (${drafts.length})`}
+                </button>
+                <button
+                  type="button"
+                  className="btn secondary"
+                  onClick={() => {
+                    setDrafts([]);
+                    setEditingDraft(null);
+                  }}
+                >
+                  Descartar tudo
+                </button>
+              </div>
+              {editingDraft !== null && (
+                <div className="hint">Rascunho {editingDraft + 1} carregado no formulário — "Salvar Cadastro" salva só ele.</div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -352,9 +490,9 @@ export default function VoterForm({ initial, onSubmit, onSubmitMultiple, submitt
         file={ocrFile}
       />
 
-      <button className="btn" disabled={submitting}>
+      <button className="btn" disabled={submitting || savingDrafts}>
         <Icon name="save" size={18} />
-        {submitting ? 'Salvando...' : submitLabel}
+        {submitting || savingDrafts ? 'Salvando...' : editingDraft !== null ? 'Salvar rascunho' : submitLabel}
       </button>
     </form>
   );

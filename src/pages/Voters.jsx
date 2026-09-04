@@ -439,38 +439,8 @@ export default function Voters() {
         <VoterForm
           initial={ocrResult ? { name: ocrResult.nome, gender: ocrResult.gender, age: ocrResult.age, zone: ocrResult.zona, section: ocrResult.secao, titleNumber: ocrResult.titleNumber } : undefined}
           onSubmit={handleCreate}
-          onSubmitMultiple={async (votersList) => {
-            setSaving(true);
-            setFormError('');
-            let ok = 0;
-            let fail = 0;
-            for (const v of votersList) {
-              try {
-                await api('/voters', {
-                  method: 'POST',
-                  body: {
-                    name: v.name || '',
-                    phone: v.phone || '',
-                    state: 'CE',
-                    city: v.city || '',
-                    neighborhood: v.neighborhood || '',
-                    gender: v.gender || '',
-                    age: v.age || '',
-                    zone: v.zone || '',
-                    section: v.section || '',
-                    titleNumber: v.titleNumber || '',
-                    notes: '',
-                  },
-                });
-                ok += 1;
-              } catch (err) {
-                showDuplicateError(err);
-                fail += 1;
-              }
-            }
-            setSaving(false);
-            setOpen(false);
-            flash(`Lista salva: ${ok} cadastrado(s)${fail ? `, ${fail} falha(s)` : ''}`);
+          onDraftsSaved={(n) => {
+            flash(`${n} eleitor(es) salvos.`);
             load(search);
           }}
           submitting={saving}
