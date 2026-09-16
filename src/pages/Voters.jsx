@@ -45,6 +45,11 @@ export default function Voters() {
   // Filtro por localização: cidade (valor "UF|Cidade") e bairro
   const [cityFilter, setCityFilter] = useState('');
   const [neighborhoodFilter, setNeighborhoodFilter] = useState('');
+  const [phoneFilter, setPhoneFilter] = useState('');
+  const [zoneFilter, setZoneFilter] = useState('');
+  const [sectionFilter, setSectionFilter] = useState('');
+  const [birthDateFilter, setBirthDateFilter] = useState('');
+  const [ageFilter, setAgeFilter] = useState('');
   const [cityOptions, setCityOptions] = useState([]);
 
   // Filtro por equipe: admin filtra por cabo e subcabo; cabo filtra pelos próprios subcabos
@@ -107,6 +112,11 @@ export default function Voters() {
         p.set('city', city);
       }
       if (neighborhoodFilter) p.set('neighborhood', neighborhoodFilter);
+      if (phoneFilter) p.set('phone', phoneFilter);
+      if (zoneFilter) p.set('zone', zoneFilter);
+      if (sectionFilter) p.set('section', sectionFilter);
+      if (birthDateFilter) p.set('birthDate', birthDateFilter);
+      if (ageFilter) p.set('age', ageFilter);
       const qs = p.toString();
       const data = await api(`/voters${qs ? `?${qs}` : ''}`);
       if (requestId !== loadRequest.current) return;
@@ -120,7 +130,7 @@ export default function Voters() {
   useEffect(() => {
     const timer = window.setTimeout(() => load(search), 250);
     return () => window.clearTimeout(timer);
-  }, [search, teamIds, onlyToday, cityFilter, neighborhoodFilter]);
+  }, [search, teamIds, onlyToday, cityFilter, neighborhoodFilter, phoneFilter, zoneFilter, sectionFilter, birthDateFilter, ageFilter]);
 
   function clearTodayFilter() {
     setOnlyToday(false);
@@ -252,7 +262,6 @@ export default function Voters() {
           </div>
         )}
 
-        {cityOptions.length > 0 && (
           <div className="row-actions" style={{ marginTop: 0, marginBottom: 4 }}>
             <div className="field" style={{ flex: 1 }}>
               <label>Cidade</label>
@@ -268,13 +277,40 @@ export default function Voters() {
             </div>
             <div className="field" style={{ flex: 1 }}>
               <label>Bairro</label>
-              <select value={neighborhoodFilter} onChange={(e) => setNeighborhoodFilter(e.target.value)}>
-                <option value="">Todos</option>
-                {neighborhoodOptions.map((n) => <option key={n} value={n}>{n}</option>)}
-              </select>
+              <input 
+                type="text" 
+                placeholder="Ex: Centro" 
+                value={neighborhoodFilter} 
+                onChange={(e) => setNeighborhoodFilter(e.target.value)} 
+              />
             </div>
           </div>
-        )}
+
+        <div className="row-actions" style={{ marginTop: 0, marginBottom: 4 }}>
+          <div className="field" style={{ flex: 1 }}>
+            <label>Celular</label>
+            <input type="text" placeholder="Apenas números" value={phoneFilter} onChange={(e) => setPhoneFilter(e.target.value)} />
+          </div>
+          <div className="field" style={{ flex: 1 }}>
+            <label>Idade</label>
+            <input type="number" placeholder="Idade exata" value={ageFilter} onChange={(e) => setAgeFilter(e.target.value)} />
+          </div>
+        </div>
+
+        <div className="row-actions" style={{ marginTop: 0, marginBottom: 4 }}>
+          <div className="field" style={{ flex: 1 }}>
+            <label>Zona</label>
+            <input type="text" placeholder="Ex: 012" value={zoneFilter} onChange={(e) => setZoneFilter(e.target.value)} />
+          </div>
+          <div className="field" style={{ flex: 1 }}>
+            <label>Seção</label>
+            <input type="text" placeholder="Ex: 0345" value={sectionFilter} onChange={(e) => setSectionFilter(e.target.value)} />
+          </div>
+          <div className="field" style={{ flex: 1 }}>
+            <label>Data de Nasc.</label>
+            <input type="text" placeholder="DD/MM/AAAA" value={birthDateFilter} onChange={(e) => setBirthDateFilter(e.target.value)} />
+          </div>
+        </div>
 
         {voters.length === 0 && (
           <div className="empty">
@@ -393,6 +429,7 @@ export default function Voters() {
                     neighborhood: v.bairro || '',
                     gender: v.gender || '',
                     age: '',
+                    birthDate: v.dataNascimento || '',
                     zone: v.zona || '',
                     section: v.secao || '',
                     titleNumber: v.titleNumber || '',
@@ -420,6 +457,7 @@ export default function Voters() {
                 neighborhood: '',
                 gender: fields.gender || '',
                 age: fields.age || '',
+                birthDate: fields.dataNascimento || '',
                 zone: fields.zona || '',
                 section: fields.secao || '',
                 titleNumber: fields.titleNumber || '',
@@ -437,7 +475,7 @@ export default function Voters() {
 
       <BottomSheet open={open} onClose={() => setOpen(false)} title="Novo Eleitor">
         <VoterForm
-          initial={ocrResult ? { name: ocrResult.nome, gender: ocrResult.gender, age: ocrResult.age, zone: ocrResult.zona, section: ocrResult.secao, titleNumber: ocrResult.titleNumber } : undefined}
+          initial={ocrResult ? { name: ocrResult.nome, gender: ocrResult.gender, age: ocrResult.age, birthDate: ocrResult.dataNascimento, zone: ocrResult.zona, section: ocrResult.secao, titleNumber: ocrResult.titleNumber } : undefined}
           onSubmit={handleCreate}
           onDraftsSaved={(n) => {
             flash(`${n} eleitor(es) salvos.`);

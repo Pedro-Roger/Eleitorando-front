@@ -18,6 +18,7 @@ export default function VoterForm({ initial, onSubmit, onDraftsSaved, submitting
     neighborhood: initial?.neighborhood || '',
     gender: initial?.gender || '',
     age: initial?.age ?? '',
+    birthDate: initial?.birthDate || '',
     zone: initial?.zone || '',
     section: initial?.section || '',
     titleNumber: initial?.titleNumber || '',
@@ -154,6 +155,7 @@ export default function VoterForm({ initial, onSubmit, onDraftsSaved, submitting
       neighborhood: d.neighborhood || '',
       gender: d.gender || '',
       age: d.age ?? '',
+      birthDate: d.birthDate || '',
       zone: d.zone || '',
       section: d.section || '',
       titleNumber: d.titleNumber || '',
@@ -380,6 +382,15 @@ export default function VoterForm({ initial, onSubmit, onDraftsSaved, submitting
           <input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(00) 00000-0000" />
         </div>
         <div className="field" style={{ flex: 1 }}>
+          <label>Data Nasc.</label>
+          <input
+            type="text"
+            value={form.birthDate}
+            onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
+            placeholder="DD/MM/AAAA"
+          />
+        </div>
+        <div className="field" style={{ flex: 1 }}>
           <label>Idade</label>
           <input
             type="number"
@@ -482,6 +493,7 @@ export default function VoterForm({ initial, onSubmit, onDraftsSaved, submitting
           setForm((f) => ({
             ...f,
             name: fields.nome || f.name,
+            birthDate: fields.dataNascimento || f.birthDate,
             zone: fields.zona || f.zone,
             section: fields.secao || f.section,
             titleNumber: fields.titleNumber || f.titleNumber,
