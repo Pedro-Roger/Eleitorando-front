@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { api, apiDownload, getUser } from '../lib/api';
+import { buildCreatedByIds } from '../lib/exportTeamIds';
 import AppHeader from '../components/AppHeader';
 import Icon from '../components/Icon';
 
@@ -59,23 +60,17 @@ export default function Export() {
     return cabos.flatMap((c) => c.subcabos.map((s) => ({ ...s, caboName: c.name })));
   }, [options, selCabos]);
 
-  // Expande a seleção da equipe para a lista final de "cadastrado por":
-  // subcabo escolhido no filtro = só ele; senão: nada marcado = todos;
-  // cabo marcado sem subcabos marcados = cabo + todos os subcabos dele;
-  // cabo marcado com subcabos marcados = cabo + apenas os marcados.
+  // Expande a seleção da equipe para a lista final de "cadastrado por" —
+  // regras em front/src/lib/exportTeamIds.js
   const createdByIds = useMemo(() => {
-    if (subcabo && subcaboOptions.some((s) => s.id === Number(subcabo))) return [Number(subcabo)];
-    if (!options || selCabos.length === 0) return [];
-    const ids = [];
-    for (const caboId of selCabos) {
-      const cabo = options.cabos.find((c) => c.id === caboId);
-      if (!cabo) continue;
-      ids.push(cabo.id);
-      const chosen = selSubs[caboId] || [];
-      if (chosen.length === 0) ids.push(...cabo.subcabos.map((s) => s.id));
-      else ids.push(...chosen);
-    }
-    return ids;
+    if (!options) return [];
+    return buildCreatedByIds({
+      cabos: options.cabos,
+      selCabos,
+      selSubs,
+      subcabo,
+      subcaboOptions,
+    });
   }, [options, selCabos, selSubs, subcabo, subcaboOptions]);
 
   const query = useMemo(() => {

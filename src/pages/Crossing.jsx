@@ -3,16 +3,17 @@ import AppHeader from '../components/AppHeader';
 import Icon from '../components/Icon';
 import { api, getUser } from '../lib/api';
 
-// Cruzamento "Previsto vs Realizado": Realizado = apurado oficial do TSE
-// (eleição passada); Previsto = eleitores cadastrados na campanha. O badge de
-// meta compara o previsto do candidato selecionado com o realizado dele mesmo.
+// Cruzamento "Previsto vs Realizado" (visão de um único político): Realizado =
+// apurado oficial do TSE (eleição passada); Previsto = eleitores cadastrados na
+// campanha atribuídos ao mesmo político. O badge de meta compara o previsto com
+// o realizado dele mesmo.
 const PAST_YEAR = 2022;
 const TURN = 1;
 // Cargos presentes na base TSE (fallback quando /elections/offices falha).
 // DEPUTADO ESTADUAL primeiro: é onde corre a candidata principal (Keiva Dias).
 const DEFAULT_OFFICES = ['DEPUTADO ESTADUAL', 'GOVERNADOR', 'DEPUTADO FEDERAL', 'SENADOR'];
 const DEFAULT_OFFICE = DEFAULT_OFFICES[0];
-const COLORS = { mine: '#10B981', theirs: '#94A3B8' };
+const COLORS = { realizado: '#10B981', previsto: '#94A3B8' };
 
 const turnLabel = { 1: '1º Turno', 2: '2º Turno' };
 
@@ -27,33 +28,22 @@ function sumFor(rows, name) {
   return rows.reduce((sum, r) => (normalize(r.name) === key ? sum + (r.votes ?? r.voters ?? 0) : sum), 0);
 }
 
-const pct = (a, b) => (a + b > 0 ? (a / (a + b)) * 100 : 0);
-
-function SplitBar({ minePct }) {
+// Barra horizontal proporcional ao máximo da série, com o valor absoluto à direita.
+function Bar({ label, value, max, color }) {
+  const width = max > 0 ? (value / max) * 100 : 0;
   return (
-    <div style={{ display: 'flex', height: 8, marginTop: 12, borderRadius: 4, overflow: 'hidden' }}>
-      <div style={{ width: `${minePct}%`, background: COLORS.mine }}></div>
-      <div style={{ width: `${100 - minePct}%`, background: COLORS.theirs }}></div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+      <span className="meta" style={{ width: 64 }}>{label}</span>
+      <div style={{ flex: 1, height: 8, borderRadius: 4, background: '#F1F5F9' }}>
+        <div style={{ width: `${width}%`, height: 8, borderRadius: 4, background: color }} />
+      </div>
+      <span className="meta" style={{ width: 72, textAlign: 'right' }}>{value.toLocaleString('pt-BR')}</span>
     </div>
   );
 }
 
-function Totals({ mine, theirs, mineTotal, theirsTotal }) {
-  const minePct = pct(mineTotal, theirsTotal);
-  return (
-    <>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, gap: 8 }}>
-        <div><strong>{mine}</strong><br /><span className="meta">{mineTotal.toLocaleString('pt-BR')} — {minePct.toFixed(1)}%</span></div>
-        <div style={{ textAlign: 'right' }}><strong>{theirs}</strong><br /><span className="meta">{theirsTotal.toLocaleString('pt-BR')} — {(100 - minePct).toFixed(1)}%</span></div>
-      </div>
-
-      <SplitBar minePct={minePct} />
-    </>
-  );
-}
-
-// Badge de meta do "Meu candidato": Previsto (eleitores cadastrados) vs
-// Realizado (apurado TSE 2022 do próprio candidato).
+// Badge de meta do político selecionado: Previsto (eleitores cadastrados) vs
+// Realizado (apurado TSE 2022 do próprio político).
 function MetaBadge({ previsto, realizado }) {
   const verde = { background: '#ECFDF5', border: '1px solid #A7F3D0', padding: 8, borderRadius: 6, color: '#065F46', textAlign: 'center', fontWeight: 'bold' };
   const cinza = { background: '#F1F5F9', border: '1px solid #E2E8F0', padding: 8, borderRadius: 6, color: '#475569', textAlign: 'center', fontWeight: 'bold' };
@@ -84,11 +74,13 @@ export default function Crossing() {
   const isAdmin = me?.role === 'ADMIN';
   const [data, setData] = useState(null);
   const [candidates, setCandidates] = useState([]);
+  // Lista statewide do TSE (todas as cidades, agregada por nome) — alimenta o
+  // seletor de políticos mesmo quando o candidato só votou em cidades pequenas.
+  const [tseCandidates, setTseCandidates] = useState([]);
   const [error, setError] = useState('');
   const [office, setOffice] = useState(DEFAULT_OFFICE);
   const [offices, setOffices] = useState(DEFAULT_OFFICES);
-  const [mine, setMine] = useState('');
-  const [theirs, setTheirs] = useState('');
+  const [politico, setPolitico] = useState('');
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -102,83 +94,79 @@ export default function Crossing() {
     if (!isAdmin) return;
     setData(null);
     Promise.all([
-      api(`/elections/comparativo?pastYear=${PAST_YEAR}&office=${encodeURIComponent(office)}&turn=${TURN}`),
+      // limit=999: CE tem ~184 municípios — mostra todas as cidades do político
+      api(`/elections/comparativo?pastYear=${PAST_YEAR}&office=${encodeURIComponent(office)}&turn=${TURN}&limit=999`),
       api('/candidates'),
+      // Refetched junto com o comparativo: candidatos statewide do cargo/ano
+      api(`/elections/candidates?year=${PAST_YEAR}&office=${encodeURIComponent(office)}&turn=${TURN}`),
     ])
-      .then(([comp, cand]) => {
+      .then(([comp, cand, tse]) => {
         setData(comp);
         setCandidates(cand.candidates || []);
+        setTseCandidates(tse.candidates || []);
       })
       .catch((e) => setError(e.message));
   }, [isAdmin, office]);
 
-  // Opções = união dos candidatos cadastrados e dos nomes do lado TSE (passada).
+  // Opções = união dos candidatos cadastrados (grafia preferida) e dos nomes
+  // statewide da base TSE (eleição passada, todas as cidades), dedupe por nome
+  // normalizado.
   const options = useMemo(() => {
-    if (!data) return [];
     const byKey = new Map();
     for (const c of candidates) byKey.set(normalize(c.name), c.name);
-    for (const city of data.cities) {
-      for (const p of city.past) {
-        const key = normalize(p.name);
-        if (key && !byKey.has(key)) byKey.set(key, p.name);
-      }
+    for (const c of tseCandidates) {
+      const key = normalize(c.candidateName);
+      if (key && !byKey.has(key)) byKey.set(key, c.candidateName);
     }
     return [...byKey.values()];
-  }, [data, candidates]);
+  }, [candidates, tseCandidates]);
 
-  // Total de votos TSE (passada) por nome normalizado — usado nos padrões abaixo.
+  // Total de votos TSE (passada) por nome normalizado — usado no padrão abaixo.
   const votesByKey = useMemo(() => {
     const byKey = new Map();
-    if (!data) return byKey;
-    for (const city of data.cities) {
-      for (const p of city.past) {
-        const key = normalize(p.name);
-        byKey.set(key, (byKey.get(key) || 0) + (p.votes || 0));
-      }
+    for (const c of tseCandidates) {
+      const key = normalize(c.candidateName);
+      byKey.set(key, (byKey.get(key) || 0) + (c.votes || 0));
     }
     return byKey;
-  }, [data]);
+  }, [tseCandidates]);
 
-  // Padrão "Meu candidato" (em ordem): nome exato "keiva dias"; nome que começa
-  // com "keiv" e contém "dias" (ex.: KEIVILANNY DIAS MOURA GONÇALVES, nome TSE);
-  // qualquer nome contendo "keiva"; primeiro com votos > 0; primeira opção.
-  const pickMineDefault = (opts) =>
+  // Padrão (em ordem): nome exato "keiva dias"; nome que começa com "keiv" e
+  // contém "dias" (ex.: KEIVILANNY DIAS MOURA GONÇALVES, nome TSE); qualquer
+  // nome contendo "keiva"; primeiro com votos > 0; primeira opção.
+  const pickDefault = (opts) =>
     opts.find((n) => normalize(n) === 'keiva dias') ||
     opts.find((n) => { const k = normalize(n); return k.startsWith('keiv') && k.includes('dias'); }) ||
     opts.find((n) => normalize(n).includes('keiva')) ||
     opts.find((n) => (votesByKey.get(normalize(n)) || 0) > 0) ||
     opts[0];
 
-  // Padrão: "Meu candidato" = Keiva Dias (quando existir), "Adversário" =
-  // primeira outra opção com votos > 0 (senão, primeira outra opção).
   useEffect(() => {
     if (!options.length) return;
-    const mineDefault = pickMineDefault(options);
-    setMine(mineDefault);
-    setTheirs(
-      options.find((n) => n !== mineDefault && (votesByKey.get(normalize(n)) || 0) > 0) ||
-      options.find((n) => n !== mineDefault) ||
-      ''
-    );
+    setPolitico(pickDefault(options));
   }, [options, votesByKey]);
 
+  // Realizado (TSE) e Previsto (base da campanha) do político selecionado,
+  // total e por cidade.
   const result = useMemo(() => {
-    if (!data || !mine || !theirs || normalize(mine) === normalize(theirs)) return null;
+    if (!data || !politico) return null;
     const perCity = data.cities.map((city) => ({
       city: city.city,
-      minePast: sumFor(city.past, mine),
-      theirsPast: sumFor(city.past, theirs),
-      mineCurrent: sumFor(city.current, mine),
-      theirsCurrent: sumFor(city.current, theirs),
+      past: sumFor(city.past, politico),
+      current: sumFor(city.current, politico),
     }));
     return {
       perCity,
-      minePastTotal: perCity.reduce((s, c) => s + c.minePast, 0),
-      theirsPastTotal: perCity.reduce((s, c) => s + c.theirsPast, 0),
-      mineCurrentTotal: perCity.reduce((s, c) => s + c.mineCurrent, 0),
-      theirsCurrentTotal: perCity.reduce((s, c) => s + c.theirsCurrent, 0),
+      pastTotal: perCity.reduce((s, c) => s + c.past, 0),
+      currentTotal: perCity.reduce((s, c) => s + c.current, 0),
     };
-  }, [data, mine, theirs]);
+  }, [data, politico]);
+
+  const maxPast = result ? Math.max(...result.perCity.map((c) => c.past)) : 0;
+  const maxCurrent = result ? Math.max(...result.perCity.map((c) => c.current)) : 0;
+  const citiesWithData = result
+    ? result.perCity.filter((c) => c.past + c.current > 0)
+    : [];
 
   if (!isAdmin) {
     return (
@@ -192,7 +180,7 @@ export default function Crossing() {
   return (
     <>
       <AppHeader
-        title="Inteligência Eleitoral"
+        title="Resultado da eleição"
         subtitle={`${office} ${data?.pastYear || PAST_YEAR} — ${turnLabel[data?.turn ?? TURN] || `${data?.turn}º Turno`}`}
       />
       <div className="page">
@@ -202,41 +190,37 @@ export default function Crossing() {
         {data && (
           <>
             <div className="card" style={{ marginBottom: 16 }}>
-              <h2 className="panel-title">Confronto Direto</h2>
+              <h2 className="panel-title">Resultado {office} {data.pastYear}</h2>
               <div className="field">
                 <label>Cargo (eleição {data?.pastYear || PAST_YEAR})</label>
                 <select value={office} onChange={(e) => setOffice(e.target.value)}>
                   {offices.map((o) => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
-              <div className="field">
-                <label>Meu candidato</label>
-                <select value={mine} onChange={(e) => setMine(e.target.value)}>
-                  {options.map((n) => <option key={normalize(n)} value={n}>{n}</option>)}
-                </select>
-              </div>
               <div className="field" style={{ marginBottom: 16 }}>
-                <label>Adversário</label>
-                <select value={theirs} onChange={(e) => setTheirs(e.target.value)}>
+                <label>Político</label>
+                <select value={politico} onChange={(e) => setPolitico(e.target.value)}>
                   {options.map((n) => <option key={normalize(n)} value={n}>{n}</option>)}
                 </select>
-                <div className="hint">Escolha dois candidatos diferentes para comparar.</div>
               </div>
 
-              {!result && <div className="meta">Selecione candidatos diferentes para ver o confronto.</div>}
+              {!result && <div className="meta">Nenhum político disponível para este cargo.</div>}
               {result && (
                 <>
-                  <MetaBadge previsto={result.mineCurrentTotal} realizado={result.minePastTotal} />
+                  <MetaBadge previsto={result.currentTotal} realizado={result.pastTotal} />
 
-                  <h3 className="panel-title" style={{ fontSize: 15, marginTop: 20 }}>Realizado — apurado oficial TSE {data.pastYear} {data.office}</h3>
-                  <Totals mine={mine} theirs={theirs} mineTotal={result.minePastTotal} theirsTotal={result.theirsPastTotal} />
-
-                  <h3 className="panel-title" style={{ fontSize: 15, marginTop: 20 }}>Previsto — base da campanha (eleitores cadastrados)</h3>
-                  {result.mineCurrentTotal + result.theirsCurrentTotal === 0 ? (
-                    <div className="meta">Nenhum eleitor cadastrado para estes candidatos ainda.</div>
-                  ) : (
-                    <Totals mine={mine} theirs={theirs} mineTotal={result.mineCurrentTotal} theirsTotal={result.theirsCurrentTotal} />
-                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16, gap: 8 }}>
+                    <div>
+                      <div className="meta">Realizado</div>
+                      <strong style={{ fontSize: 24 }}>{result.pastTotal.toLocaleString('pt-BR')}</strong>
+                      <div className="meta">apurado oficial TSE {data.pastYear}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div className="meta">Previsto</div>
+                      <strong style={{ fontSize: 24 }}>{result.currentTotal.toLocaleString('pt-BR')}</strong>
+                      <div className="meta">base da campanha (eleitores cadastrados)</div>
+                    </div>
+                  </div>
                 </>
               )}
             </div>
@@ -244,26 +228,16 @@ export default function Crossing() {
             {result && (
               <div className="card">
                 <h3 className="panel-title">Por Cidade</h3>
-                {result.perCity.filter((c) => c.minePast + c.theirsPast + c.mineCurrent + c.theirsCurrent > 0).length === 0 && (
-                  <div className="meta">Sem dados para os candidatos selecionados.</div>
+                {citiesWithData.length === 0 && (
+                  <div className="meta">Sem dados para o político selecionado.</div>
                 )}
-                {result.perCity
-                  .filter((c) => c.minePast + c.theirsPast + c.mineCurrent + c.theirsCurrent > 0)
-                  .map((c) => {
-                    const cityPct = pct(c.minePast, c.theirsPast);
-                    return (
-                      <div key={c.city} style={{ marginBottom: 14 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                          <span style={{ fontWeight: 600 }}>{c.city}</span>
-                          <span className="meta">{c.minePast.toLocaleString('pt-BR')} vs {c.theirsPast.toLocaleString('pt-BR')}</span>
-                        </div>
-                        <SplitBar minePct={cityPct} />
-                        {(c.mineCurrent > 0 || c.theirsCurrent > 0) && (
-                          <div className="meta">Previsto: {c.mineCurrent} vs {c.theirsCurrent}</div>
-                        )}
-                      </div>
-                    );
-                  })}
+                {citiesWithData.map((c) => (
+                  <div key={c.city} style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600 }}>{c.city}</div>
+                    <Bar label="Realizado" value={c.past} max={maxPast} color={COLORS.realizado} />
+                    <Bar label="Previsto" value={c.current} max={maxCurrent} color={COLORS.previsto} />
+                  </div>
+                ))}
               </div>
             )}
           </>

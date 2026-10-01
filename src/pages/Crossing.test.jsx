@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import Crossing from './Crossing';
 import { api, getUser } from '../lib/api';
@@ -22,9 +22,8 @@ vi.mock('../lib/api', () => ({
 // o mesmo nome; o cruzamento por nome normalizado soma os dois lados.
 const TSE_NAME = 'KEIVILANNY DIAS MOURA GONÇALVES';
 
-// Previsto vs Realizado: "Realizado" = apurado TSE (lado past) do candidato;
-// "Previsto" = eleitores cadastrados (lado current). O badge compara o
-// previsto do "Meu candidato" com o realizado dele mesmo.
+// Previsto vs Realizado: "Realizado" = apurado TSE (lado past) do político
+// selecionado; "Previsto" = eleitores cadastrados (lado current) dele mesmo.
 // Pendente: 140+100 = 240 previsto vs 800+400 = 1200 realizado → 20%.
 const comparativoPendente = makeComparativo({ pastKeiva: [800, 400], currentKeiva: [140, 100] });
 // Batida: 1300 previsto >= 1200 realizado.
@@ -72,11 +71,29 @@ const candidatos = {
   ],
 };
 
+// Lista statewide do TSE (GET /elections/candidates): TODOS os candidatos do
+// cargo agregados por nome. "ZEZINHO DO SERTÃO" só votou em cidades pequenas —
+// não aparece em nenhuma cidade do comparativo mockado acima; só pode entrar no
+// seletor via lista statewide.
+const TSE_ONLY_NAME = 'ZEZINHO DO SERTÃO';
+const eleicaoTSE = {
+  year: 2022,
+  office: 'DEPUTADO ESTADUAL',
+  turn: 1,
+  candidates: [
+    { candidateName: TSE_NAME, party: 'PL', votes: 78456 },
+    { candidateName: 'ÉLMANO XAVIER', party: 'PT', votes: 60123 },
+    { candidateName: 'ANDRÉ FERNANDES', party: 'REPUBLICANOS', votes: 45789 },
+    { candidateName: TSE_ONLY_NAME, party: 'AVANTE', votes: 1200 },
+  ],
+};
+
 const offices = { offices: ['DEPUTADO ESTADUAL', 'GOVERNADOR', 'DEPUTADO FEDERAL', 'SENADOR'] };
 
 function mockApiAdmin({ comparativo = comparativoPendente, withOffices = true } = {}) {
   api.mockImplementation((path) => {
     if (path.startsWith('/elections/comparativo')) return Promise.resolve(comparativo);
+    if (path.startsWith('/elections/candidates?')) return Promise.resolve(eleicaoTSE);
     if (path === '/candidates') return Promise.resolve(candidatos);
     if (path === '/elections/offices') {
       return withOffices ? Promise.resolve(offices) : Promise.reject(new Error('boom'));
@@ -96,44 +113,70 @@ describe('Crossing Page', () => {
 
     render(<Crossing />);
 
-    expect(await screen.findByText('Confronto Direto')).toBeInTheDocument();
+    // Único seletor "Político" (não há mais seletor de adversário)
+    expect(await screen.findByText('Político')).toBeInTheDocument();
+    expect(screen.queryByText('Adversário')).not.toBeInTheDocument();
+    expect(screen.queryByText('Meu candidato')).not.toBeInTheDocument();
+
+    // Padrão: Keiva Dias — o nome selecionado é o mesmo do TSE após normalização
+    // (dedupe por nome normalizado mantém a grafia do cadastro).
+    const politicoSelect = await screen.findByDisplayValue('Keivilanny Dias Moura Gonçalves');
+    expect(politicoSelect.value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase())
+      .toBe(TSE_NAME.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase());
 
     // Seletor de cargo: padrão DEPUTADO ESTADUAL (onde Keiva Dias concorreu)
     expect(screen.getByDisplayValue('DEPUTADO ESTADUAL')).toBeInTheDocument();
     expect(api).toHaveBeenCalledWith(expect.stringContaining('office=DEPUTADO%20ESTADUAL'));
 
-    // Padrão: "Meu candidato" = Keiva Dias — o nome selecionado é o mesmo do TSE
-    // após normalização (dedupe por nome normalizado mantém a grafia do cadastro).
-    const mineSelect = await screen.findByDisplayValue('Keivilanny Dias Moura Gonçalves');
-    expect(mineSelect.value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase())
-      .toBe(TSE_NAME.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase());
-    // "Adversário" = primeira outra opção com votos > 0
-    expect(screen.getByDisplayValue('Élmano Xavier')).toBeInTheDocument();
+    // comparativo pede TODAS as cidades (CE tem ~184 municípios)
+    expect(api).toHaveBeenCalledWith(expect.stringContaining('limit=999'));
+    // lista statewide pedida junto (cargo/ano/turno)
+    expect(api).toHaveBeenCalledWith(
+      expect.stringContaining('/elections/candidates?year=2022&office=DEPUTADO%20ESTADUAL&turn=1')
+    );
 
     // Subtítulo do cabeçalho reflete o cargo selecionado
     expect(screen.getByTestId('app-header')).toHaveTextContent('DEPUTADO ESTADUAL 2022 — 1º Turno');
+    expect(screen.getByTestId('app-header')).toHaveTextContent('Resultado da eleição');
 
-    // Seções Previsto vs Realizado
-    expect(screen.getByText('Realizado — apurado oficial TSE 2022 DEPUTADO ESTADUAL')).toBeInTheDocument();
-    expect(screen.getByText('Previsto — base da campanha (eleitores cadastrados)')).toBeInTheDocument();
+    // Card com título do cargo e ano
+    expect(screen.getByText('Resultado DEPUTADO ESTADUAL 2022')).toBeInTheDocument();
 
-    // Realizado: Keivilanny 1.200 vs Élmano 1.200 → 50,0% (nos dois lados)
-    expect(screen.getAllByText(/50\.0%/).length).toBe(2);
-    // Previsto: 240 (140+100) vs 20 (10+10) → 92,3%
-    expect(screen.getByText(/92\.3%/)).toBeInTheDocument();
+    // Realizado = soma dos votos TSE dela (800+400 = 1.200)
+    expect(screen.getByText('1.200')).toBeInTheDocument();
+    // Previsto = base da campanha dela (140+100 = 240)
+    expect(screen.getByText('240')).toBeInTheDocument();
 
     // Badge de meta: previsto 240 < realizado 1.200 → pendente com 20% de cobertura
     const badge = await screen.findByText(/Meta pendente/);
     expect(badge).toHaveTextContent('Meta pendente — 20% do realizado');
-    // Sem badge de batida nem lógica antiga de vantagem/desvantagem
     expect(screen.queryByText(/Meta batida/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Vantagem/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Desvantagem/)).not.toBeInTheDocument();
 
-    // Card por cidade
+    // Card por cidade: votos dela em cada cidade
     expect(screen.getByText('Por Cidade')).toBeInTheDocument();
     expect(screen.getByText('Fortaleza')).toBeInTheDocument();
     expect(screen.getByText('Caucaia')).toBeInTheDocument();
+    expect(screen.getByText('800')).toBeInTheDocument();
+    expect(screen.getByText('400')).toBeInTheDocument();
+    expect(screen.getByText('140')).toBeInTheDocument();
+    expect(screen.getByText('100')).toBeInTheDocument();
+  });
+
+  it('como ADMIN, o seletor Político inclui candidato TSE que não aparece em nenhuma cidade do comparativo', async () => {
+    getUser.mockReturnValue({ role: 'ADMIN' });
+    mockApiAdmin();
+
+    render(<Crossing />);
+
+    // Prova que o nome só pode vir da lista statewide (/elections/candidates):
+    // não está presente em nenhuma cidade do comparativo mockado
+    expect(JSON.stringify(comparativoPendente)).not.toContain(TSE_ONLY_NAME);
+
+    const politicoSelect = await screen.findByDisplayValue('Keivilanny Dias Moura Gonçalves');
+    const optionNames = within(politicoSelect).getAllByRole('option').map((o) => o.textContent);
+    expect(optionNames).toContain(TSE_ONLY_NAME);
+    // Padrão segue o cadastro (grafia preferida sobre a do TSE)
+    expect(optionNames).toContain('Keivilanny Dias Moura Gonçalves');
   });
 
   it('como ADMIN, mostra badge verde "Meta batida" quando previsto >= realizado', async () => {
@@ -142,7 +185,6 @@ describe('Crossing Page', () => {
 
     render(<Crossing />);
 
-    expect(await screen.findByText('Confronto Direto')).toBeInTheDocument();
     await screen.findByDisplayValue('Keivilanny Dias Moura Gonçalves');
 
     // Previsto 1.300 >= realizado 1.200 → badge verde com ícone trending_up
@@ -158,8 +200,7 @@ describe('Crossing Page', () => {
 
     render(<Crossing />);
 
-    expect(await screen.findByText('Confronto Direto')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('DEPUTADO ESTADUAL')).toBeInTheDocument();
+    expect(await screen.findByDisplayValue('DEPUTADO ESTADUAL')).toBeInTheDocument();
     expect(await screen.findByDisplayValue('Keivilanny Dias Moura Gonçalves')).toBeInTheDocument();
     expect(screen.getByText(/Meta pendente/)).toBeInTheDocument();
   });
