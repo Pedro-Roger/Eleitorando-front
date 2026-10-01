@@ -19,8 +19,7 @@ vi.mock('../lib/api', () => ({
 
 // Dados realistas: candidata principal "Keiva Dias" = KEIVILANNY DIAS MOURA
 // GONÇALVES (nome TSE, com Ç), DEPUTADO ESTADUAL 2022. O cadastro interno usa
-// o mesmo nome; o cruzamento por nome normalizado soma os votos TSE.
-// O lado "current" (intenção de voto) permanece no mock para provar que a página o ignora.
+// o mesmo nome; o cruzamento por nome normalizado soma os dois lados.
 const TSE_NAME = 'KEIVILANNY DIAS MOURA GONÇALVES';
 
 const comparativo = {
@@ -106,18 +105,17 @@ describe('Crossing Page', () => {
 
     // Seções (meta reflete o cargo selecionado)
     expect(screen.getByText('Votos TSE 2022 — DEPUTADO ESTADUAL')).toBeInTheDocument();
-    // A seção de intenção de voto foi removida: a página compara apenas votos TSE.
-    expect(screen.queryByText(/Intenção de Voto/)).not.toBeInTheDocument();
+    expect(screen.getByText('Intenção de Voto (cadastrados)')).toBeInTheDocument();
 
     // TSE: Keivilanny 1700 (1200+500) vs Élmano 1200 (800+400) → 58,6% / 41,4%
     expect(screen.getByText(/58\.6%/)).toBeInTheDocument();
     expect(screen.getByText(/41\.4%/)).toBeInTheDocument();
 
-    // Dados do lado "atual" continuam no mock (50 vs 20 → 71,4%) e devem ser ignorados.
-    expect(screen.queryByText(/71\.4%/)).not.toBeInTheDocument();
+    // Intenção: 50 (30+20) vs 20 (10+10) → 71,4%
+    expect(screen.getByText(/71\.4%/)).toBeInTheDocument();
 
-    // Badge verde de vantagem (Keiva à frente no confronto TSE), sem badge de desvantagem
-    expect(screen.getByText(/Vantagem/)).toBeInTheDocument();
+    // Badge verde de vantagem (Keiva à frente) nos dois confrontos, sem badge de desvantagem
+    expect(screen.getAllByText(/Vantagem/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/Desvantagem/)).not.toBeInTheDocument();
 
     // Card por cidade
