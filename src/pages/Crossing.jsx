@@ -3,8 +3,9 @@ import AppHeader from '../components/AppHeader';
 import Icon from '../components/Icon';
 import { api, getUser } from '../lib/api';
 
-// Cruzamento: votos oficiais do TSE (eleição passada) vs intenção de voto
-// dos eleitores cadastrados, confrontando dois candidatos por cidade.
+// Cruzamento "Previsto vs Realizado": Realizado = apurado oficial do TSE
+// (eleição passada); Previsto = eleitores cadastrados na campanha. O badge de
+// meta compara o previsto do candidato selecionado com o realizado dele mesmo.
 const PAST_YEAR = 2022;
 const TURN = 1;
 // Cargos presentes na base TSE (fallback quando /elections/offices falha).
@@ -39,8 +40,6 @@ function SplitBar({ minePct }) {
 
 function Totals({ mine, theirs, mineTotal, theirsTotal }) {
   const minePct = pct(mineTotal, theirsTotal);
-  const diff = minePct - (100 - minePct);
-  const ahead = mineTotal > theirsTotal;
   return (
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, gap: 8 }}>
@@ -48,18 +47,35 @@ function Totals({ mine, theirs, mineTotal, theirsTotal }) {
         <div style={{ textAlign: 'right' }}><strong>{theirs}</strong><br /><span className="meta">{theirsTotal.toLocaleString('pt-BR')} — {(100 - minePct).toFixed(1)}%</span></div>
       </div>
 
-      {ahead ? (
-        <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', padding: 8, borderRadius: 6, color: '#065F46', textAlign: 'center', fontWeight: 'bold' }}>
-          <Icon name="trending_up" size={16} /> {mine} +{Math.abs(diff).toFixed(1)}% (Vantagem)
-        </div>
-      ) : (
-        <div style={{ background: '#F1F5F9', border: '1px solid #E2E8F0', padding: 8, borderRadius: 6, color: '#475569', textAlign: 'center', fontWeight: 'bold' }}>
-          {theirs} +{Math.abs(diff).toFixed(1)}% (Desvantagem)
-        </div>
-      )}
-
       <SplitBar minePct={minePct} />
     </>
+  );
+}
+
+// Badge de meta do "Meu candidato": Previsto (eleitores cadastrados) vs
+// Realizado (apurado TSE 2022 do próprio candidato).
+function MetaBadge({ previsto, realizado }) {
+  const verde = { background: '#ECFDF5', border: '1px solid #A7F3D0', padding: 8, borderRadius: 6, color: '#065F46', textAlign: 'center', fontWeight: 'bold' };
+  const cinza = { background: '#F1F5F9', border: '1px solid #E2E8F0', padding: 8, borderRadius: 6, color: '#475569', textAlign: 'center', fontWeight: 'bold' };
+
+  if (previsto === 0 && realizado === 0) {
+    return <div style={cinza}>Sem dados de meta</div>;
+  }
+
+  const batida = (previsto >= realizado && realizado > 0) || (previsto > 0 && realizado === 0);
+  if (batida) {
+    return (
+      <div style={verde}>
+        <Icon name="trending_up" size={16} /> Meta batida — previsto ≥ realizado
+      </div>
+    );
+  }
+
+  const cobertura = Math.round((previsto / realizado) * 1000) / 10;
+  return (
+    <div style={cinza}>
+      Meta pendente — {cobertura.toLocaleString('pt-BR')}% do realizado
+    </div>
   );
 }
 
@@ -210,12 +226,14 @@ export default function Crossing() {
               {!result && <div className="meta">Selecione candidatos diferentes para ver o confronto.</div>}
               {result && (
                 <>
-                  <h3 className="panel-title" style={{ fontSize: 15 }}>Votos TSE {data.pastYear} — {data.office}</h3>
+                  <MetaBadge previsto={result.mineCurrentTotal} realizado={result.minePastTotal} />
+
+                  <h3 className="panel-title" style={{ fontSize: 15, marginTop: 20 }}>Realizado — apurado oficial TSE {data.pastYear} {data.office}</h3>
                   <Totals mine={mine} theirs={theirs} mineTotal={result.minePastTotal} theirsTotal={result.theirsPastTotal} />
 
-                  <h3 className="panel-title" style={{ fontSize: 15, marginTop: 20 }}>Intenção de Voto (cadastrados)</h3>
+                  <h3 className="panel-title" style={{ fontSize: 15, marginTop: 20 }}>Previsto — base da campanha (eleitores cadastrados)</h3>
                   {result.mineCurrentTotal + result.theirsCurrentTotal === 0 ? (
-                    <div className="meta">Nenhuma intenção de voto cadastrada para estes candidatos ainda.</div>
+                    <div className="meta">Nenhum eleitor cadastrado para estes candidatos ainda.</div>
                   ) : (
                     <Totals mine={mine} theirs={theirs} mineTotal={result.mineCurrentTotal} theirsTotal={result.theirsCurrentTotal} />
                   )}
@@ -241,7 +259,7 @@ export default function Crossing() {
                         </div>
                         <SplitBar minePct={cityPct} />
                         {(c.mineCurrent > 0 || c.theirsCurrent > 0) && (
-                          <div className="meta">Intenção: {c.mineCurrent} vs {c.theirsCurrent}</div>
+                          <div className="meta">Previsto: {c.mineCurrent} vs {c.theirsCurrent}</div>
                         )}
                       </div>
                     );

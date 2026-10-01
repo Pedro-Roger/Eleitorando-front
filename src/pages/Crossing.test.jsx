@@ -22,37 +22,47 @@ vi.mock('../lib/api', () => ({
 // o mesmo nome; o cruzamento por nome normalizado soma os dois lados.
 const TSE_NAME = 'KEIVILANNY DIAS MOURA GONÇALVES';
 
-const comparativo = {
-  pastYear: 2022,
-  office: 'DEPUTADO ESTADUAL',
-  turn: 1,
-  cities: [
-    {
-      city: 'Fortaleza',
-      past: [
-        { name: TSE_NAME, votes: 1200 },
-        { name: 'ÉLMANO XAVIER', votes: 800 },
-        { name: 'ANDRÉ FERNANDES', votes: 300 },
-      ],
-      current: [
-        { name: 'Keivilanny Dias Moura Gonçalves', voters: 30 },
-        { name: 'Élmano Xavier', voters: 10 },
-      ],
-    },
-    {
-      city: 'Caucaia',
-      past: [
-        { name: TSE_NAME, votes: 500 },
-        { name: 'ÉLMANO XAVIER', votes: 400 },
-        { name: 'ANDRÉ FERNANDES', votes: 100 },
-      ],
-      current: [
-        { name: 'Keivilanny Dias Moura Gonçalves', voters: 20 },
-        { name: 'Élmano Xavier', voters: 10 },
-      ],
-    },
-  ],
-};
+// Previsto vs Realizado: "Realizado" = apurado TSE (lado past) do candidato;
+// "Previsto" = eleitores cadastrados (lado current). O badge compara o
+// previsto do "Meu candidato" com o realizado dele mesmo.
+// Pendente: 140+100 = 240 previsto vs 800+400 = 1200 realizado → 20%.
+const comparativoPendente = makeComparativo({ pastKeiva: [800, 400], currentKeiva: [140, 100] });
+// Batida: 1300 previsto >= 1200 realizado.
+const comparativoBatida = makeComparativo({ pastKeiva: [800, 400], currentKeiva: [900, 400] });
+
+function makeComparativo({ pastKeiva, currentKeiva }) {
+  return {
+    pastYear: 2022,
+    office: 'DEPUTADO ESTADUAL',
+    turn: 1,
+    cities: [
+      {
+        city: 'Fortaleza',
+        past: [
+          { name: TSE_NAME, votes: pastKeiva[0] },
+          { name: 'ÉLMANO XAVIER', votes: 800 },
+          { name: 'ANDRÉ FERNANDES', votes: 300 },
+        ],
+        current: [
+          { name: 'Keivilanny Dias Moura Gonçalves', voters: currentKeiva[0] },
+          { name: 'Élmano Xavier', voters: 10 },
+        ],
+      },
+      {
+        city: 'Caucaia',
+        past: [
+          { name: TSE_NAME, votes: pastKeiva[1] },
+          { name: 'ÉLMANO XAVIER', votes: 400 },
+          { name: 'ANDRÉ FERNANDES', votes: 100 },
+        ],
+        current: [
+          { name: 'Keivilanny Dias Moura Gonçalves', voters: currentKeiva[1] },
+          { name: 'Élmano Xavier', voters: 10 },
+        ],
+      },
+    ],
+  };
+}
 
 const candidatos = {
   candidates: [
@@ -64,7 +74,7 @@ const candidatos = {
 
 const offices = { offices: ['DEPUTADO ESTADUAL', 'GOVERNADOR', 'DEPUTADO FEDERAL', 'SENADOR'] };
 
-function mockApiAdmin({ withOffices = true } = {}) {
+function mockApiAdmin({ comparativo = comparativoPendente, withOffices = true } = {}) {
   api.mockImplementation((path) => {
     if (path.startsWith('/elections/comparativo')) return Promise.resolve(comparativo);
     if (path === '/candidates') return Promise.resolve(candidatos);
@@ -80,7 +90,7 @@ describe('Crossing Page', () => {
     vi.clearAllMocks();
   });
 
-  it('como ADMIN, carrega dados, seleciona Keiva (nome TSE) por padrão e mostra Vantagem', async () => {
+  it('como ADMIN, seleciona Keiva por padrão e mostra badge "Meta pendente" quando previsto < realizado', async () => {
     getUser.mockReturnValue({ role: 'ADMIN' });
     mockApiAdmin();
 
@@ -103,25 +113,43 @@ describe('Crossing Page', () => {
     // Subtítulo do cabeçalho reflete o cargo selecionado
     expect(screen.getByTestId('app-header')).toHaveTextContent('DEPUTADO ESTADUAL 2022 — 1º Turno');
 
-    // Seções (meta reflete o cargo selecionado)
-    expect(screen.getByText('Votos TSE 2022 — DEPUTADO ESTADUAL')).toBeInTheDocument();
-    expect(screen.getByText('Intenção de Voto (cadastrados)')).toBeInTheDocument();
+    // Seções Previsto vs Realizado
+    expect(screen.getByText('Realizado — apurado oficial TSE 2022 DEPUTADO ESTADUAL')).toBeInTheDocument();
+    expect(screen.getByText('Previsto — base da campanha (eleitores cadastrados)')).toBeInTheDocument();
 
-    // TSE: Keivilanny 1700 (1200+500) vs Élmano 1200 (800+400) → 58,6% / 41,4%
-    expect(screen.getByText(/58\.6%/)).toBeInTheDocument();
-    expect(screen.getByText(/41\.4%/)).toBeInTheDocument();
+    // Realizado: Keivilanny 1.200 vs Élmano 1.200 → 50,0% (nos dois lados)
+    expect(screen.getAllByText(/50\.0%/).length).toBe(2);
+    // Previsto: 240 (140+100) vs 20 (10+10) → 92,3%
+    expect(screen.getByText(/92\.3%/)).toBeInTheDocument();
 
-    // Intenção: 50 (30+20) vs 20 (10+10) → 71,4%
-    expect(screen.getByText(/71\.4%/)).toBeInTheDocument();
-
-    // Badge verde de vantagem (Keiva à frente) nos dois confrontos, sem badge de desvantagem
-    expect(screen.getAllByText(/Vantagem/).length).toBeGreaterThan(0);
+    // Badge de meta: previsto 240 < realizado 1.200 → pendente com 20% de cobertura
+    const badge = await screen.findByText(/Meta pendente/);
+    expect(badge).toHaveTextContent('Meta pendente — 20% do realizado');
+    // Sem badge de batida nem lógica antiga de vantagem/desvantagem
+    expect(screen.queryByText(/Meta batida/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Vantagem/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Desvantagem/)).not.toBeInTheDocument();
 
     // Card por cidade
     expect(screen.getByText('Por Cidade')).toBeInTheDocument();
     expect(screen.getByText('Fortaleza')).toBeInTheDocument();
     expect(screen.getByText('Caucaia')).toBeInTheDocument();
+  });
+
+  it('como ADMIN, mostra badge verde "Meta batida" quando previsto >= realizado', async () => {
+    getUser.mockReturnValue({ role: 'ADMIN' });
+    mockApiAdmin({ comparativo: comparativoBatida });
+
+    render(<Crossing />);
+
+    expect(await screen.findByText('Confronto Direto')).toBeInTheDocument();
+    await screen.findByDisplayValue('Keivilanny Dias Moura Gonçalves');
+
+    // Previsto 1.300 >= realizado 1.200 → badge verde com ícone trending_up
+    const badge = await screen.findByText(/Meta batida/);
+    expect(badge).toHaveTextContent('Meta batida — previsto ≥ realizado');
+    expect(screen.getByTestId('icon')).toHaveTextContent('trending_up');
+    expect(screen.queryByText(/Meta pendente/)).not.toBeInTheDocument();
   });
 
   it('como ADMIN, se /elections/offices falhar, usa os cargos padrão e mantém DEPUTADO ESTADUAL', async () => {
@@ -133,7 +161,7 @@ describe('Crossing Page', () => {
     expect(await screen.findByText('Confronto Direto')).toBeInTheDocument();
     expect(screen.getByDisplayValue('DEPUTADO ESTADUAL')).toBeInTheDocument();
     expect(await screen.findByDisplayValue('Keivilanny Dias Moura Gonçalves')).toBeInTheDocument();
-    expect(screen.getAllByText(/Vantagem/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Meta pendente/)).toBeInTheDocument();
   });
 
   it('não-admin vê mensagem de acesso restrito e a API não é chamada', () => {
