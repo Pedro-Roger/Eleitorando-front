@@ -3,8 +3,7 @@ import AppHeader from '../components/AppHeader';
 import Icon from '../components/Icon';
 import { api, getUser } from '../lib/api';
 
-// Cruzamento: votos oficiais do TSE (eleição passada) vs intenção de voto
-// dos eleitores cadastrados, confrontando dois candidatos por cidade.
+// Cruzamento: votos oficiais do TSE (eleição passada) entre dois candidatos por cidade.
 const PAST_YEAR = 2022;
 const TURN = 1;
 // Cargos presentes na base TSE (fallback quando /elections/offices falha).
@@ -20,10 +19,10 @@ function normalize(s) {
   return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 }
 
-// Soma os votos (lado TSE) ou eleitores (lado atual) de um nome na lista.
+// Soma os votos TSE (passada) de um nome na lista.
 function sumFor(rows, name) {
   const key = normalize(name);
-  return rows.reduce((sum, r) => (normalize(r.name) === key ? sum + (r.votes ?? r.voters ?? 0) : sum), 0);
+  return rows.reduce((sum, r) => (normalize(r.name) === key ? sum + (r.votes ?? 0) : sum), 0);
 }
 
 const pct = (a, b) => (a + b > 0 ? (a / (a + b)) * 100 : 0);
@@ -152,15 +151,11 @@ export default function Crossing() {
       city: city.city,
       minePast: sumFor(city.past, mine),
       theirsPast: sumFor(city.past, theirs),
-      mineCurrent: sumFor(city.current, mine),
-      theirsCurrent: sumFor(city.current, theirs),
     }));
     return {
       perCity,
       minePastTotal: perCity.reduce((s, c) => s + c.minePast, 0),
       theirsPastTotal: perCity.reduce((s, c) => s + c.theirsPast, 0),
-      mineCurrentTotal: perCity.reduce((s, c) => s + c.mineCurrent, 0),
-      theirsCurrentTotal: perCity.reduce((s, c) => s + c.theirsCurrent, 0),
     };
   }, [data, mine, theirs]);
 
@@ -212,13 +207,6 @@ export default function Crossing() {
                 <>
                   <h3 className="panel-title" style={{ fontSize: 15 }}>Votos TSE {data.pastYear} — {data.office}</h3>
                   <Totals mine={mine} theirs={theirs} mineTotal={result.minePastTotal} theirsTotal={result.theirsPastTotal} />
-
-                  <h3 className="panel-title" style={{ fontSize: 15, marginTop: 20 }}>Intenção de Voto (cadastrados)</h3>
-                  {result.mineCurrentTotal + result.theirsCurrentTotal === 0 ? (
-                    <div className="meta">Nenhuma intenção de voto cadastrada para estes candidatos ainda.</div>
-                  ) : (
-                    <Totals mine={mine} theirs={theirs} mineTotal={result.mineCurrentTotal} theirsTotal={result.theirsCurrentTotal} />
-                  )}
                 </>
               )}
             </div>
@@ -226,11 +214,11 @@ export default function Crossing() {
             {result && (
               <div className="card">
                 <h3 className="panel-title">Por Cidade</h3>
-                {result.perCity.filter((c) => c.minePast + c.theirsPast + c.mineCurrent + c.theirsCurrent > 0).length === 0 && (
+                {result.perCity.filter((c) => c.minePast + c.theirsPast > 0).length === 0 && (
                   <div className="meta">Sem dados para os candidatos selecionados.</div>
                 )}
                 {result.perCity
-                  .filter((c) => c.minePast + c.theirsPast + c.mineCurrent + c.theirsCurrent > 0)
+                  .filter((c) => c.minePast + c.theirsPast > 0)
                   .map((c) => {
                     const cityPct = pct(c.minePast, c.theirsPast);
                     return (
@@ -240,9 +228,6 @@ export default function Crossing() {
                           <span className="meta">{c.minePast.toLocaleString('pt-BR')} vs {c.theirsPast.toLocaleString('pt-BR')}</span>
                         </div>
                         <SplitBar minePct={cityPct} />
-                        {(c.mineCurrent > 0 || c.theirsCurrent > 0) && (
-                          <div className="meta">Intenção: {c.mineCurrent} vs {c.theirsCurrent}</div>
-                        )}
                       </div>
                     );
                   })}
