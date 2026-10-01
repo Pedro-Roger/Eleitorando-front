@@ -157,6 +157,15 @@ export default function Home() {
                   <Icon name="chevron_right" />
                 </div>
               </Link>
+              <Link className="link-card" to="/cruzamento">
+                <div className="card tappable card-row">
+                  <div className="card-leading">
+                    <div className="avatar"><Icon name="compare_arrows" size={18} /></div>
+                    <div><div className="card-title">Inteligência eleitoral</div><div className="meta">TSE 2022 vs intenção de voto, por cidade</div></div>
+                  </div>
+                  <Icon name="chevron_right" />
+                </div>
+              </Link>
               <Link className="link-card" to="/exportar">
                 <div className="card tappable card-row">
                   <div className="card-leading">

@@ -419,16 +419,18 @@ export default function VoterForm({ initial, onSubmit, onDraftsSaved, submitting
       </div>
 
       <h3 className="form-section-title">Localização e Eleitoral</h3>
-      <StateCitySelect
-        state={form.state}
-        city={form.city}
-        hideState
-        cityRequired={false}
-        onChange={({ state, city }) => {
-          autoFilledRef.current.city = false;
-          setForm({ ...form, state, city });
-        }}
-      />
+      {zoneSecaoStatus !== 'found' && (
+        <StateCitySelect
+          state={form.state}
+          city={form.city}
+          hideState
+          cityRequired={false}
+          onChange={({ state, city }) => {
+            autoFilledRef.current.city = false;
+            setForm({ ...form, state, city });
+          }}
+        />
+      )}
       <div className="field">
         <label>Bairro</label>
         <input

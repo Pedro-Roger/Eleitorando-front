@@ -12,6 +12,7 @@ import Voters from './pages/Voters';
 import Profile from './pages/Profile';
 import Panel from './pages/Panel';
 import Candidates from './pages/Candidates';
+import Crossing from './pages/Crossing';
 import Reports from './pages/Reports';
 import Activities from './pages/Activities';
 import Settings from './pages/Settings';
@@ -53,6 +54,7 @@ export default function App() {
           <Route path="/perfil" element={<Protected><Profile /></Protected>} />
           <Route path="/painel" element={<Protected><Panel /></Protected>} />
           <Route path="/candidatos" element={<Protected><Candidates /></Protected>} />
+          <Route path="/cruzamento" element={<Protected><Crossing /></Protected>} />
           <Route path="/relatorios" element={<Protected><Reports /></Protected>} />
           <Route path="/atividades" element={<Protected><Activities /></Protected>} />
           <Route path="/configuracoes" element={<Protected><Settings /></Protected>} />

@@ -3,18 +3,9 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  server: {
-    port: 5174,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3333',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
-      },
-      '/uploads': {
-        target: 'http://localhost:3333',
-        changeOrigin: true,
-      },
-    },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    include: ['src/**/*.test.jsx'],
   },
 });

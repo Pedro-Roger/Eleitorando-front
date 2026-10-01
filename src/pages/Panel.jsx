@@ -25,10 +25,18 @@ function BarList({ rows, nameOf, color }) {
 export default function Panel() {
   const me = getUser();
   const [data, setData] = useState(null);
+  const [tse, setTse] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
     api('/dashboard/demographics').then(setData).catch((e) => setError(e.message));
+    // Cartão "Votos por cidade" usa votos oficiais do TSE (rota exclusiva de ADMIN).
+    // Falha ou resposta vazia simplesmente esconde o cartão, sem afetar o resto do painel.
+    if (me?.role === 'ADMIN') {
+      api('/elections/principais-cidades?year=2022&office=GOVERNADOR&turn=1&limit=10')
+        .then(setTse)
+        .catch(() => {});
+    }
   }, []);
 
   return (
@@ -54,10 +62,13 @@ export default function Panel() {
               <BarList rows={data.byZone} nameOf={(r) => `Zona ${r.zone}`} color="var(--primary)" />
             </div>
 
-            <div className="card demographic-card">
-              <h2 className="panel-title">Principais Cidades</h2>
-              <BarList rows={data.byCity} nameOf={(r) => `${r.city}/${r.state}`} color="var(--secondary)" />
-            </div>
+            {me?.role === 'ADMIN' && tse?.cities?.length > 0 && (
+              <div className="card demographic-card">
+                <h2 className="panel-title">Votos por cidade (TSE {tse.year})</h2>
+                <p className="meta">{tse.office} · {tse.turn}º turno · % da quantidade de votos</p>
+                <BarList rows={tse.cities} nameOf={(r) => r.city} color="var(--secondary)" />
+              </div>
+            )}
           </>
         )}
       </div>
