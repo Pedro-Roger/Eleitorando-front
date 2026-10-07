@@ -12,6 +12,7 @@ export default function Crossing() {
   const [subcaboId, setSubcaboId] = useState('');
 
   const [data, setData] = useState(null);
+  const [totais, setTotais] = useState({ tse: 0, coletado: 0 });
   const [loading, setLoading] = useState(false);
   const me = getUser();
 
@@ -43,6 +44,7 @@ export default function Crossing() {
       .then((res) => {
         if (isMounted) {
           const sections = res.sections || [];
+          setTotais({ tse: res.totalTseVotes || 0, coletado: res.totalCollectedVoters || 0 });
           const byCity = {};
           
           sections.forEach(item => {
@@ -64,7 +66,7 @@ export default function Crossing() {
         }
       })
       .catch(() => {
-        if (isMounted) setData({});
+        if (isMounted) { setData({}); setTotais({ tse: 0, coletado: 0 }); }
       })
       .finally(() => {
         if (isMounted) setLoading(false);
@@ -122,6 +124,21 @@ export default function Crossing() {
                 <option value="">Todos</option>
                 {subcabos.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
               </select>
+            </div>
+          </div>
+        )}
+
+        
+        {candidatoNome && data && Object.keys(data).length > 0 && (
+          <div style={{ background: '#0F172A', color: 'white', padding: 20, borderRadius: 8, marginBottom: 24, display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
+            <div style={{ textAlign: 'center' }}>
+              <span style={{ display: 'block', fontSize: 14, color: '#94A3B8', marginBottom: 4 }}>Total Sistema (Eleitorando)</span>
+              <strong style={{ fontSize: 28, color: '#10B981' }}>{totais.coletado}</strong>
+            </div>
+            <div style={{ width: 1, height: 40, background: '#334155' }}></div>
+            <div style={{ textAlign: 'center' }}>
+              <span style={{ display: 'block', fontSize: 14, color: '#94A3B8', marginBottom: 4 }}>Total Oficial (TSE)</span>
+              <strong style={{ fontSize: 28, color: '#38BDF8' }}>{totais.tse}</strong>
             </div>
           </div>
         )}
