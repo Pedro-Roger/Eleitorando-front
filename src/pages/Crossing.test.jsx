@@ -19,7 +19,7 @@ describe('Crossing Page', () => {
   });
 
   it('exibe mensagem pedindo para selecionar candidato inicialmente', async () => {
-    api.mockResolvedValueOnce([{ id: 1, nome: 'Keiva Dias' }]);
+    api.mockResolvedValueOnce({ candidates: [{ id: 1, name: 'Keiva Dias' }] });
     render(<Crossing />);
     
     expect(screen.getByText('Selecione um candidato para ver os dados.')).toBeInTheDocument();
@@ -28,10 +28,10 @@ describe('Crossing Page', () => {
   it('carrega e renderiza os dados de auditoria após seleção de candidato', async () => {
     api.mockImplementation((path) => {
       if (path === '/candidates') return Promise.resolve({ candidates: [{ id: 1, name: 'Keiva Dias', nome: 'Keiva Dias' }] });
-      if (path.includes('/elections/comparativo-zona?candidateName=Keiva%20Dias')) return Promise.resolve([
+      if (path.includes('/elections/comparativo-zona?candidateName=Keiva%20Dias')) return Promise.resolve({ sections: [
         { zona: 1, secao: 10, coletado: 100, tse: 100 },
         { zona: 2, secao: 20, coletado: 120, tse: 100 }
-      ]);
+      ] });
       return Promise.reject(new Error('not found'));
     });
     
@@ -58,7 +58,7 @@ describe('Crossing Page', () => {
   it('renderiza vazio se não houver dados para o candidato', async () => {
     api.mockImplementation((path) => {
       if (path === '/candidates') return Promise.resolve({ candidates: [{ id: 1, name: 'Keiva Dias', nome: 'Keiva Dias' }] });
-      if (path.includes('/elections/comparativo-zona')) return Promise.resolve([]);
+      if (path.includes('/elections/comparativo-zona')) return Promise.resolve({ sections: [] });
       return Promise.reject(new Error('not found'));
     });
     

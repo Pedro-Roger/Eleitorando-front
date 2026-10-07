@@ -23,7 +23,7 @@ export default function Crossing() {
     
     api(`/elections/comparativo-zona?candidateName=${encodeURIComponent(candidatoNome)}`)
       .then((res) => {
-        if (isMounted) setData(res);
+        if (isMounted) setData(res.sections || []);
       })
       .catch(() => {
         if (isMounted) setData([]);
