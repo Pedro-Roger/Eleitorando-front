@@ -1,18 +1,30 @@
 import { useEffect, useState } from 'react';
 import AppHeader from '../components/AppHeader';
-import { api } from '../lib/api';
+import { api, getUser } from '../lib/api';
 
 export default function Crossing() {
   const [candidatos, setCandidatos] = useState([]);
   const [candidatoNome, setCandidatoNome] = useState('');
+  
+  const [cabos, setCabos] = useState([]);
+  const [subcabos, setSubcabos] = useState([]);
+  const [caboId, setCaboId] = useState('');
+  const [subcaboId, setSubcaboId] = useState('');
+
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const me = getUser();
 
   useEffect(() => {
     api('/candidates').then(data => {
       setCandidatos(data.candidates || []);
     }).catch(() => setCandidatos([]));
-  }, []);
+
+    if (me?.role === 'ADMIN') {
+      api('/dashboard/list?type=cabos').then(res => setCabos(res.items || [])).catch(console.error);
+      api('/dashboard/list?type=subcabos').then(res => setSubcabos(res.items || [])).catch(console.error);
+    }
+  }, [me]);
 
   useEffect(() => {
     if (!candidatoNome) {
@@ -23,11 +35,14 @@ export default function Crossing() {
     let isMounted = true;
     setLoading(true);
     
-    api(`/elections/comparativo-zona?candidateName=${encodeURIComponent(candidatoNome)}&limit=9999`)
+    let url = `/elections/comparativo-zona?candidateName=${encodeURIComponent(candidatoNome)}&limit=9999`;
+    if (caboId) url += `&caboId=${caboId}`;
+    if (subcaboId) url += `&subcaboId=${subcaboId}`;
+    
+    api(url)
       .then((res) => {
         if (isMounted) {
           const sections = res.sections || [];
-          
           const byCity = {};
           
           sections.forEach(item => {
@@ -56,7 +71,7 @@ export default function Crossing() {
       });
       
     return () => { isMounted = false; };
-  }, [candidatoNome]);
+  }, [candidatoNome, caboId, subcaboId]);
 
   return (
     <>
@@ -83,6 +98,33 @@ export default function Crossing() {
             </button>
           ))}
         </div>
+
+        {candidatoNome && (
+          <div style={{ background: '#F8FAFC', padding: 16, borderRadius: 8, marginBottom: 24, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 200px' }}>
+              <label style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Cabo Eleitoral</label>
+              <select 
+                value={caboId} 
+                onChange={e => { setCaboId(e.target.value); setSubcaboId(''); }} 
+                style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #CBD5E1' }}
+              >
+                <option value="">Todos</option>
+                {cabos.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: '1 1 200px' }}>
+              <label style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Subcabo</label>
+              <select 
+                value={subcaboId} 
+                onChange={e => { setSubcaboId(e.target.value); setCaboId(''); }} 
+                style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #CBD5E1' }}
+              >
+                <option value="">Todos</option>
+                {subcabos.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
+              </select>
+            </div>
+          </div>
+        )}
 
         {candidatoNome && (
           <h2 className="panel-title" style={{ marginBottom: 16 }}>Comparativo de Votos por Cidade e Zona</h2>
