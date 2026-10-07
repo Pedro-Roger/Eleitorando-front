@@ -13,6 +13,7 @@ import Profile from './pages/Profile';
 import Panel from './pages/Panel';
 import Candidates from './pages/Candidates';
 import Crossing from './pages/Crossing';
+import ComparativoZona from './pages/ComparativoZona';
 import Reports from './pages/Reports';
 import Activities from './pages/Activities';
 import Settings from './pages/Settings';
@@ -42,9 +43,6 @@ export default function App() {
     <ModalStackProvider>
       <div className={`app-shell ${hideTabs ? 'auth-shell' : ''} ${isBrandHeader ? 'tall-header' : ''}`}>
         {booting && <SplashScreen onDone={() => setBooting(false)} />}
-        {/* A rolagem acontece neste contêiner (e não no body): evita o bug do iOS Safari
-            em que elementos position:fixed "flutuam" quando a altura da tela muda
-            (ligação ativa, teclado aberto, barra do navegador recolhendo). */}
         <main className="app-scroll"><Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/trocar-senha" element={<ChangePassword />} />
@@ -55,6 +53,7 @@ export default function App() {
           <Route path="/painel" element={<Protected><Panel /></Protected>} />
           <Route path="/candidatos" element={<Protected><Candidates /></Protected>} />
           <Route path="/cruzamento" element={<Protected><Crossing /></Protected>} />
+          <Route path="/comparativo-zona" element={<Protected><ComparativoZona /></Protected>} />
           <Route path="/relatorios" element={<Protected><Reports /></Protected>} />
           <Route path="/atividades" element={<Protected><Activities /></Protected>} />
           <Route path="/configuracoes" element={<Protected><Settings /></Protected>} />
