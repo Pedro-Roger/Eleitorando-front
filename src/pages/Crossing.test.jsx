@@ -18,7 +18,7 @@ vi.mock('../lib/api', () => ({
 }));
 
 // Dados realistas. Slot A: candidata principal "Keiva Dias" = KEIVILANNY DIAS
-// MOURA GONÇALVES (nome TSE, com Ç), DEPUTADO ESTADUAL 2022 — 29.844 votos.
+// MOURA GONÇALVES (nome TSE, com Ç), DEPUTADO ESTADUAL 2026 — 29.844 votos.
 // Slot B (padrão, mesmo cargo): o outro com mais votos = ÉLMANO XAVIER —
 // 44.766 = 1,5x Keiva, delta = +14.922 votos (+50%).
 const TSE_NAME = 'KEIVILANNY DIAS MOURA GONÇALVES';
@@ -43,7 +43,7 @@ const offices = { offices: ['DEPUTADO ESTADUAL', 'GOVERNADOR', 'DEPUTADO FEDERAL
 
 // Lista statewide do TSE por cargo (GET /elections/candidates).
 const tseDep = {
-  year: 2022,
+  year: 2026,
   office: 'DEPUTADO ESTADUAL',
   turn: 1,
   candidates: [
@@ -55,7 +55,7 @@ const tseDep = {
 };
 
 const tseGov = {
-  year: 2022,
+  year: 2026,
   office: 'GOVERNADOR',
   turn: 1,
   candidates: [
@@ -69,7 +69,7 @@ const tseGov = {
 // Coletado padrão: Keiva 140+100 = 240; Élmano 400+200 = 600.
 function comparativoDep(currentKeiva = [140, 100]) {
   return {
-    pastYear: 2022,
+    pastYear: 2026,
     office: 'DEPUTADO ESTADUAL',
     turn: 1,
     cities: [
@@ -100,7 +100,7 @@ function comparativoDep(currentKeiva = [140, 100]) {
 }
 
 const comparativoGov = {
-  pastYear: 2022,
+  pastYear: 2026,
   office: 'GOVERNADOR',
   turn: 1,
   cities: [
@@ -162,7 +162,7 @@ describe('Crossing Page — Inteligência Eleitoral (comparativo A vs B)', () =>
     // Cabeçalho da página
     const header = await screen.findByTestId('app-header');
     expect(header).toHaveTextContent('Inteligência Eleitoral');
-    expect(header).toHaveTextContent('TSE 2022 — comparativo');
+    expect(header).toHaveTextContent('TSE 2026 — comparativo');
 
     // Dois slots independentes (cargo + político em cada)
     const slotA = screen.getByTestId('slot-a');
@@ -265,8 +265,8 @@ describe('Crossing Page — Inteligência Eleitoral (comparativo A vs B)', () =>
     // Refetch do cargo novo (comparativo + statewide), com limit=999.
     // Durante o recarregamento os slots desmontam ("Carregando..."), então
     // re-consulta o slot B depois.
-    expect(api).toHaveBeenCalledWith(expect.stringContaining('/elections/comparativo?pastYear=2022&office=GOVERNADOR'));
-    expect(api).toHaveBeenCalledWith(expect.stringContaining('/elections/candidates?year=2022&office=GOVERNADOR&turn=1'));
+    expect(api).toHaveBeenCalledWith(expect.stringContaining('/elections/comparativo?pastYear=2026&office=GOVERNADOR'));
+    expect(api).toHaveBeenCalledWith(expect.stringContaining('/elections/candidates?year=2026&office=GOVERNADOR&turn=1'));
 
     // Padrão do novo cargo: Élmano (615.011, o outro com mais votos — Keiva não concorreu a governador)
     const slotBReloaded = await screen.findByTestId('slot-b');

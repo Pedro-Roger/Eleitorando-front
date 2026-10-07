@@ -21,7 +21,7 @@ const demographics = {
 };
 
 const cidadesTse = {
-  year: 2022,
+  year: 2026,
   office: 'GOVERNADOR',
   turn: 1,
   cities: [
@@ -100,14 +100,14 @@ describe('Panel Page', () => {
 
     render(<Panel />);
 
-    expect(await screen.findByText('Votos por cidade (TSE 2022)')).toBeInTheDocument();
+    expect(await screen.findByText('Votos por cidade (TSE 2026)')).toBeInTheDocument();
     expect(screen.getByText(/% da quantidade de votos/)).toBeInTheDocument();
     expect(screen.getByText('Fortaleza')).toBeInTheDocument();
   });
 
   it('como ADMIN, com cidades vazias o card do TSE fica oculto', async () => {
     getUser.mockReturnValue({ role: 'ADMIN' });
-    mockApi({ cidades: { year: 2022, office: 'GOVERNADOR', turn: 1, cities: [] } });
+    mockApi({ cidades: { year: 2026, office: 'GOVERNADOR', turn: 1, cities: [] } });
 
     render(<Panel />);
 

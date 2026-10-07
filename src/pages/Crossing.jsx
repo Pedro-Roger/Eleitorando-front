@@ -5,9 +5,9 @@ import { api, getUser } from '../lib/api';
 
 // Inteligência Eleitoral — comparativo "previsto vs realizado" entre DOIS
 // políticos (slots A e B, cargos podem ser diferentes). Obtido = apurado
-// oficial do TSE 2022; Coletado = eleitores cadastrados na campanha atribuídos
+// oficial do TSE 2026; Coletado = eleitores cadastrados na campanha atribuídos
 // ao político. Inclui delta de votos entre os slots e a base por bairro.
-const PAST_YEAR = 2022;
+const PAST_YEAR = 2026;
 const TURN = 1;
 // Cargos presentes na base TSE (fallback quando /elections/offices falha).
 // DEPUTADO ESTADUAL primeiro: é onde corre a candidata principal (Keiva Dias).
@@ -95,7 +95,7 @@ function Bar({ label, value, max, color }) {
 }
 
 // Badge de meta do político: Previsto (coletado — eleitores cadastrados) vs
-// Realizado (obtido — apurado TSE 2022 do próprio político).
+// Realizado (obtido — apurado TSE 2026 do próprio político).
 function MetaBadge({ previsto, realizado }) {
   const verde = { background: '#ECFDF5', border: '1px solid #A7F3D0', padding: 8, borderRadius: 6, color: '#065F46', textAlign: 'center', fontWeight: 'bold' };
   const cinza = { background: '#F1F5F9', border: '1px solid #E2E8F0', padding: 8, borderRadius: 6, color: '#475569', textAlign: 'center', fontWeight: 'bold' };
@@ -277,7 +277,7 @@ export default function Crossing() {
   if (!isAdmin) {
     return (
       <>
-        <AppHeader title="Inteligência Eleitoral" subtitle="TSE 2022 — comparativo" />
+        <AppHeader title="Inteligência Eleitoral" subtitle="TSE 2026 — comparativo" />
         <div className="page"><div className="alert error">Acesso restrito ao administrador.</div></div>
       </>
     );
@@ -285,7 +285,7 @@ export default function Crossing() {
 
   return (
     <>
-      <AppHeader title="Inteligência Eleitoral" subtitle="TSE 2022 — comparativo" />
+      <AppHeader title="Inteligência Eleitoral" subtitle="TSE 2026 — comparativo" />
       <div className="page">
         {error && <div className="alert error">{error}</div>}
         {(!entryA || !entryB) && !error && <div className="empty">Carregando...</div>}

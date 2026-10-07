@@ -33,7 +33,7 @@ export default function Panel() {
     // Cartão "Votos por cidade" usa votos oficiais do TSE (rota exclusiva de ADMIN).
     // Falha ou resposta vazia simplesmente esconde o cartão, sem afetar o resto do painel.
     if (me?.role === 'ADMIN') {
-      api('/elections/principais-cidades?year=2022&office=GOVERNADOR&turn=1&limit=10')
+      api('/elections/principais-cidades?year=2026&office=GOVERNADOR&turn=1&limit=10')
         .then(setTse)
         .catch(() => {});
     }
