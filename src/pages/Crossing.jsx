@@ -9,7 +9,7 @@ export default function Crossing() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    api('/candidatos').then(setCandidatos).catch(() => setCandidatos([]));
+    api('/candidates').then(data => setCandidatos(data.candidates || [])).catch(() => setCandidatos([]));
   }, []);
 
   useEffect(() => {
@@ -47,7 +47,7 @@ export default function Crossing() {
             style={{ padding: 8, width: '100%', borderRadius: 8 }}
           >
             <option value="">Selecione o Candidato</option>
-            {candidatos.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
+            {candidatos.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
           </select>
         </div>
 

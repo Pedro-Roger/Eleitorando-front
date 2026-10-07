@@ -63,7 +63,7 @@ export default function Panel() {
             {me?.role === 'ADMIN' && tse?.cities?.length > 0 && (
               <div className="card demographic-card">
                 <h2 className="panel-title">Votos por cidade (TSE {tse.year})</h2>
-                <p className="meta">{tse.office} · {tse.turn}º turno</p>
+                <p className="meta">{tse.office} · {tse.turn}º turno · % da quantidade de votos</p>
                 <BarList rows={tse.cities} nameOf={(r) => r.city} color="var(--secondary)" showAbsolute={true} />
               </div>
             )}
