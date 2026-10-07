@@ -8,7 +8,7 @@ const scopeLabel = {
   SUBCABO: 'Seus cadastros',
 };
 
-function BarList({ rows, nameOf, color }) {
+function BarList({ rows, nameOf, color, showAbsolute = false }) {
   if (!rows?.length) return <div className="meta">Sem dados ainda.</div>;
   const total = Math.max(rows.reduce((sum, r) => sum + r.total, 0), 1);
   return rows.map((r, i) => (
@@ -17,7 +17,7 @@ function BarList({ rows, nameOf, color }) {
       <div className="bar-track">
         <div className="bar-fill" style={{ width: `${(r.total / total) * 100}%`, background: color }} />
       </div>
-      <span className="val">{Math.round((r.total / total) * 100)}%</span>
+      <span className="val">{showAbsolute ? r.total : `${Math.round((r.total / total) * 100)}%`}</span>
     </div>
   ));
 }
@@ -30,8 +30,6 @@ export default function Panel() {
 
   useEffect(() => {
     api('/dashboard/demographics').then(setData).catch((e) => setError(e.message));
-    // Cartão "Votos por cidade" usa votos oficiais do TSE (rota exclusiva de ADMIN).
-    // Falha ou resposta vazia simplesmente esconde o cartão, sem afetar o resto do painel.
     if (me?.role === 'ADMIN') {
       api('/elections/principais-cidades?year=2026&office=GOVERNADOR&turn=1&limit=10')
         .then(setTse)
@@ -59,14 +57,14 @@ export default function Panel() {
 
             <div className="card demographic-card">
               <h2 className="panel-title">Zonas Eleitorais</h2>
-              <BarList rows={data.byZone} nameOf={(r) => `Zona ${r.zone}`} color="var(--primary)" />
+              <BarList rows={data.byZone} nameOf={(r) => `Zona ${r.zone}`} color="var(--primary)" showAbsolute={true} />
             </div>
 
             {me?.role === 'ADMIN' && tse?.cities?.length > 0 && (
               <div className="card demographic-card">
                 <h2 className="panel-title">Votos por cidade (TSE {tse.year})</h2>
-                <p className="meta">{tse.office} · {tse.turn}º turno · % da quantidade de votos</p>
-                <BarList rows={tse.cities} nameOf={(r) => r.city} color="var(--secondary)" />
+                <p className="meta">{tse.office} · {tse.turn}º turno</p>
+                <BarList rows={tse.cities} nameOf={(r) => r.city} color="var(--secondary)" showAbsolute={true} />
               </div>
             )}
           </>
