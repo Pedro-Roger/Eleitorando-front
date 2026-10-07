@@ -12,6 +12,7 @@ export default function Crossing() {
   const [subcaboId, setSubcaboId] = useState('');
   const [filtroZona, setFiltroZona] = useState('');
   const [filtroSecao, setFiltroSecao] = useState('');
+  const [apenasComColeta, setApenasComColeta] = useState(true);
 
   const [rawSections, setRawSections] = useState([]);
   const [totais, setTotais] = useState({ tse: 0, coletado: 0 });
@@ -63,6 +64,7 @@ export default function Crossing() {
     let filtered = rawSections;
     if (filtroZona) filtered = filtered.filter(s => String(s.zona).includes(filtroZona));
     if (filtroSecao) filtered = filtered.filter(s => String(s.secao).includes(filtroSecao));
+    if (apenasComColeta) filtered = filtered.filter(s => Number(s.coletado) > 0);
 
     const byCity = {};
     filtered.forEach(item => {
@@ -78,7 +80,7 @@ export default function Crossing() {
       byCity[city].sort((a, b) => Number(a.zona) - Number(b.zona) || Number(a.secao) - Number(b.secao));
     }
     return byCity;
-  }, [rawSections, filtroZona, filtroSecao]);
+  }, [rawSections, filtroZona, filtroSecao, apenasComColeta]);
 
   return (
     <>
@@ -151,6 +153,12 @@ export default function Crossing() {
               />
             </div>
           </div>
+            <div style={{ width: '100%', marginTop: 8 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, color: '#475569' }}>
+                <input type="checkbox" checked={apenasComColeta} onChange={e => setApenasComColeta(e.target.checked)} />
+                Mostrar apenas seções com eleitores cadastrados
+              </label>
+            </div>
         )}
 
         
