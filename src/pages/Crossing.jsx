@@ -262,38 +262,37 @@ export default function Crossing() {
                     <h3 style={{ margin: 0, fontSize: 18, color: '#0F172A' }}>{cidade}</h3>
                   </div>
                   
-                  <div style={{ padding: 16 }}>
-                    {data[cidade].map(item => {
-                      const key = `${item.zona}-${item.secao}`;
-                      const divergencia = item.coletado > item.tse;
-                      const color = divergencia ? '#E11D48' : '#10B981';
-                      
-                      return (
-                        <div key={key} style={{ marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid #F1F5F9', borderLeft: `4px solid ${color}`, paddingLeft: 12 }}>
-                          <h4 style={{ margin: '0 0 8px 0', fontSize: 16 }}>Zona {item.zona} — Seção {item.secao}</h4>
-                          <div style={{ display: 'flex', gap: 32, fontSize: 14 }}>
-                            <div>
-                              <span style={{ color: '#64748B', display: 'block', fontSize: 12 }}>Sistema (Eleitorando)</span>
-                              <strong style={{ fontSize: 18, color: divergencia ? '#E11D48' : '#0F172A' }}>{item.coletado}</strong>
-                            </div>
-                            <div>
-                              <span style={{ color: '#64748B', display: 'block', fontSize: 12 }}>Oficial (TSE)</span>
-                              <strong style={{ fontSize: 18, color: '#0F172A' }}>{item.tse}</strong>
-                            </div>
-                            {divergencia && (
-                              <div style={{ display: 'flex', alignItems: 'center', color: '#E11D48', fontWeight: 'bold' }}>
-                                ⚠️ Falta(m) {item.coletado - item.tse} voto(s)
-                              </div>
-                            )}
-                            {!divergencia && (
-                              <div style={{ display: 'flex', alignItems: 'center', color: '#10B981', fontWeight: 'bold' }}>
-                                ✓ OK
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <div style={{ padding: 16, overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                      <thead>
+                        <tr style={{ background: '#F8FAFC', textAlign: 'left' }}>
+                          <th style={{ padding: '12px 8px', borderBottom: '2px solid #E2E8F0', color: '#475569' }}>Zona</th>
+                          <th style={{ padding: '12px 8px', borderBottom: '2px solid #E2E8F0', color: '#475569' }}>Seção</th>
+                          <th style={{ padding: '12px 8px', borderBottom: '2px solid #E2E8F0', color: '#475569' }}>Eleitores (Sistema)</th>
+                          <th style={{ padding: '12px 8px', borderBottom: '2px solid #E2E8F0', color: '#475569' }}>Votos (TSE)</th>
+                          <th style={{ padding: '12px 8px', borderBottom: '2px solid #E2E8F0', color: '#475569' }}>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {data[cidade].map(item => {
+                          const key = `${item.zona}-${item.secao}`;
+                          const divergencia = item.coletado > item.tse;
+                          const color = divergencia ? '#E11D48' : '#10B981';
+                          
+                          return (
+                            <tr key={key} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                              <td style={{ padding: '12px 8px', fontWeight: '500' }}>{item.zona}</td>
+                              <td style={{ padding: '12px 8px', fontWeight: '500' }}>{item.secao}</td>
+                              <td style={{ padding: '12px 8px', color: divergencia ? '#E11D48' : '#0F172A', fontWeight: 'bold' }}>{item.coletado}</td>
+                              <td style={{ padding: '12px 8px', color: '#0F172A', fontWeight: 'bold' }}>{item.tse}</td>
+                              <td style={{ padding: '12px 8px', color: color, fontWeight: 'bold' }}>
+                                {divergencia ? `⚠️ Faltam ${item.coletado - item.tse} votos` : '✓ OK'}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               ))
