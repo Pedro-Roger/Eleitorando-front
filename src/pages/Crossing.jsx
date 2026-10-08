@@ -27,6 +27,8 @@ export default function Crossing() {
   const [filtroSecao, setFiltroSecao] = useState('');
   const [rows, setRows] = useState([]);
   const [report, setReport] = useState(null);
+  const [missingVoters, setMissingVoters] = useState(null);
+  const [missingVotersLoading, setMissingVotersLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const me = getUser();
@@ -51,6 +53,7 @@ export default function Crossing() {
     if (!candidatoNome) {
       setRows([]);
       setReport(null);
+      setMissingVoters(null);
       setError('');
       setLoading(false);
       return () => { mounted = false; };
@@ -70,6 +73,7 @@ export default function Crossing() {
         if (!mounted) return;
         setRows(comparison.rows || []);
         setReport(summary);
+        setMissingVoters(null);
       })
       .catch(() => {
         if (mounted) {
@@ -94,6 +98,33 @@ export default function Crossing() {
       await apiDownload(`/elections/relatorio-faltantes/pdf${query}`);
     } catch (downloadError) {
       setError(downloadError.message || 'Não foi possível gerar o PDF.');
+    }
+  }
+
+  function reportQuery() {
+    const queryParams = new URLSearchParams({ candidateName: candidatoNome });
+    if (caboId) queryParams.set('caboId', caboId);
+    if (subcaboId) queryParams.set('subcaboId', subcaboId);
+    return `?${queryParams.toString()}`;
+  }
+
+  async function showMissingVoters() {
+    setMissingVotersLoading(true);
+    try {
+      const data = await api(`/elections/relatorio-faltantes/eleitores${reportQuery()}`);
+      setMissingVoters(data.voters || []);
+    } catch (loadError) {
+      setError(loadError.message || 'Não foi possível carregar os eleitores das seções faltantes.');
+    } finally {
+      setMissingVotersLoading(false);
+    }
+  }
+
+  async function downloadMissingVotersReport() {
+    try {
+      await apiDownload(`/elections/relatorio-faltantes/eleitores/pdf${reportQuery()}`);
+    } catch (downloadError) {
+      setError(downloadError.message || 'Não foi possível gerar o relatório de eleitores.');
     }
   }
 
@@ -238,10 +269,18 @@ export default function Crossing() {
             {report && (
               <section className="report-section" style={{ order: -1, marginBottom: 24 }} aria-labelledby="missing-report-title">
                 <div className="comparison-table-card" style={{ background: '#fff', borderRadius: 8, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                  <div style={{ marginBottom: 20 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
                     <div>
                       <h3 id="missing-report-title" style={{ margin: 0, color: '#0F172A' }}>Relatório de votos faltantes</h3>
                       <p style={{ margin: '6px 0 0', color: '#64748B' }}>Entram aqui somente as diferenças positivas entre cadastrados e apurado TSE.</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <button type="button" onClick={showMissingVoters} disabled={missingVotersLoading} style={{ padding: '9px 12px', border: '1px solid #0F766E', borderRadius: 8, background: 'white', color: '#0F766E', fontWeight: 700, cursor: missingVotersLoading ? 'wait' : 'pointer' }}>
+                        {missingVotersLoading ? 'Carregando...' : 'Ver nomes dos eleitores'}
+                      </button>
+                      <button type="button" onClick={downloadMissingVotersReport} style={{ padding: '9px 12px', border: 0, borderRadius: 8, background: '#0F766E', color: 'white', fontWeight: 700, cursor: 'pointer' }}>
+                        PDF com nomes
+                      </button>
                     </div>
                   </div>
 
@@ -252,7 +291,7 @@ export default function Crossing() {
                       ['Faltantes', report.totalFaltantes],
                     ].map(([label, value]) => (
                       <div key={label} style={{ padding: 14, borderRadius: 8, background: '#F8FAFC' }}>
-                        <strong style={{ display: 'block', fontSize: 24, color: label === 'Total faltante' ? '#BE123C' : '#0F172A' }}>{value}</strong>
+                        <strong style={{ display: 'block', fontSize: 24, color: label === 'Faltantes' ? '#BE123C' : '#0F172A' }}>{value}</strong>
                         <span style={{ color: '#64748B', fontSize: 12 }}>{label}</span>
                       </div>
                     ))}
@@ -299,6 +338,33 @@ export default function Crossing() {
                           </tr>
                         ))}</tbody>
                       </table>
+                    </div>
+                  )}
+
+                  {missingVoters && (
+                    <div style={{ marginTop: 24 }}>
+                      <h4 style={{ margin: '0 0 10px', color: '#334155' }}>Eleitores das seções abaixo da meta ({missingVoters.length})</h4>
+                      {missingVoters.length === 0 ? (
+                        <div style={{ padding: 14, color: '#047857', background: '#ECFDF5', borderRadius: 8 }}>Nenhum eleitor encontrado nas seções faltantes.</div>
+                      ) : (
+                        <div style={{ overflowX: 'auto' }}>
+                          <table style={{ width: '100%', minWidth: 820, borderCollapse: 'collapse', fontSize: 14 }}>
+                            <thead><tr style={{ background: '#EFF6FF', textAlign: 'left' }}>
+                              {['Nome', 'Telefone', 'Cabo', 'Subcabo', 'Zona', 'Seção'].map((heading) => <th key={heading} scope="col" style={{ padding: '10px 8px', borderBottom: '2px solid #BFDBFE', color: '#1D4ED8' }}>{heading}</th>)}
+                            </tr></thead>
+                            <tbody>{missingVoters.map((voter) => (
+                              <tr key={`${voter.name}-${voter.phone}-${voter.zona}-${voter.secao}`} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                                <td style={{ padding: '10px 8px', fontWeight: 600 }}>{voter.name}</td>
+                                <td style={{ padding: '10px 8px' }}>{voter.phone}</td>
+                                <td style={{ padding: '10px 8px' }}>{voter.cabo || '—'}</td>
+                                <td style={{ padding: '10px 8px' }}>{voter.subcabo || '—'}</td>
+                                <td style={{ padding: '10px 8px', fontWeight: 600 }}>{voter.zona}</td>
+                                <td style={{ padding: '10px 8px', fontWeight: 600 }}>{voter.secao}</td>
+                              </tr>
+                            ))}</tbody>
+                          </table>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
