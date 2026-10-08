@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import AppHeader from '../components/AppHeader';
-import { api } from '../services/api';
-import { getUser } from '../services/auth';
-import './Panel.css';
+import { api, getUser } from '../lib/api';
+
+
 
 export default function Crossing() {
   const [candidatos, setCandidatos] = useState([]);
