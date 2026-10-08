@@ -144,8 +144,8 @@ describe('Crossing Page', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
 
     expect(await screen.findByText('Resumo por cabo e subcabo')).toBeInTheDocument();
-    expect(screen.getByText('Total faltante')).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Votos faltantes' })).toBeInTheDocument();
+    expect(screen.getAllByText('Faltantes').length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('columnheader', { name: 'Faltantes' }).length).toBeGreaterThan(0);
     expect(screen.getByText('Exportar relatório PDF')).toBeInTheDocument();
   });
 });
