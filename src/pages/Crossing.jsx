@@ -190,14 +190,16 @@ export default function Crossing() {
               </div>
             </div>
 
-            {loading ? (
-              <div className="empty" style={{ textAlign: 'center', marginTop: 32 }}>Carregando comparação...</div>
-            ) : error ? (
-              <div className="empty" style={{ textAlign: 'center', marginTop: 32, color: '#BE123C' }}>{error}</div>
-            ) : filteredRows.length === 0 ? (
-              <div className="empty" style={{ textAlign: 'center', marginTop: 32 }}>Nenhum registro encontrado para os filtros atuais.</div>
-            ) : (
-              <div className="comparison-table-card" style={{ background: '#fff', borderRadius: 8, padding: 16, overflowX: 'auto', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <div style={{ order: 0 }}>
+                {loading ? (
+                  <div className="empty" style={{ textAlign: 'center', marginTop: 32 }}>Carregando comparação...</div>
+                ) : error ? (
+                  <div className="empty" style={{ textAlign: 'center', marginTop: 32, color: '#BE123C' }}>{error}</div>
+                ) : filteredRows.length === 0 ? (
+                  <div className="empty" style={{ textAlign: 'center', marginTop: 32 }}>Nenhum registro encontrado para os filtros atuais.</div>
+                ) : (
+                  <div className="comparison-table-card" style={{ background: '#fff', borderRadius: 8, padding: 16, overflowX: 'auto', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 12 }}>
                   <div>
                     <h3 style={{ margin: 0, color: '#0F172A' }}>Cadastrados x apurado TSE</h3>
@@ -227,11 +229,12 @@ export default function Crossing() {
                     ))}
                   </tbody>
                 </table>
+                  </div>
+                )}
               </div>
-            )}
 
             {report && (
-              <section className="report-section" style={{ marginTop: 24 }} aria-labelledby="missing-report-title">
+              <section className="report-section" style={{ order: -1, marginBottom: 24 }} aria-labelledby="missing-report-title">
                 <div className="comparison-table-card" style={{ background: '#fff', borderRadius: 8, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                   <div style={{ marginBottom: 20 }}>
                     <div>
@@ -294,6 +297,7 @@ export default function Crossing() {
                 </div>
               </section>
             )}
+            </div>
           </>
         )}
       </div>
