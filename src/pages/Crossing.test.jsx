@@ -12,6 +12,7 @@ vi.mock('../components/AppHeader', () => ({
 
 vi.mock('../lib/api', () => ({
   api: vi.fn(),
+  apiDownload: vi.fn(),
   getUser: vi.fn(() => adminUser),
 }));
 
@@ -42,6 +43,14 @@ describe('Crossing Page', () => {
         ] });
       }
       if (path.includes('/elections/comparativo-eleitores')) return Promise.resolve({ rows });
+      if (path.includes('/elections/relatorio-faltantes')) return Promise.resolve({
+        candidateName: 'Keivia Dias',
+        summary: [{ cabo: 'Felipe', subcabo: 'Pedro', cadastrados: 2, secoes: 1 }],
+        missing: [{ zona: '02', secao: '0533', cadastrados: 2, apurado: 3, faltantes: 1 }],
+        totalCadastrados: 6,
+        totalApurado: 8,
+        totalFaltantes: 1,
+      });
       return Promise.reject(new Error(`unexpected path: ${path}`));
     });
   });
@@ -52,9 +61,9 @@ describe('Crossing Page', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
 
     expect(await screen.findByText('Carregando comparação...')).toBeInTheDocument();
-    expect(await screen.findByRole('columnheader', { name: 'Votos cadastrados' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Apurado TSE' })).toBeInTheDocument();
-    const table = screen.getByRole('table');
+    expect((await screen.findAllByRole('columnheader', { name: 'Votos cadastrados' }))[0]).toBeInTheDocument();
+    expect(screen.getAllByRole('columnheader', { name: 'Apurado TSE' })[0]).toBeInTheDocument();
+    const table = screen.getAllByRole('table')[0];
     expect(within(table).getByText('Pedro')).toBeInTheDocument();
     expect(within(table).getByText('0533')).toBeInTheDocument();
     expect(within(table).getByText('2')).toBeInTheDocument();
@@ -64,22 +73,22 @@ describe('Crossing Page', () => {
   it('filtra a tabela por subcabo e zona sem remover os demais filtros', async () => {
     render(<Crossing />);
     fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
-    await screen.findByRole('columnheader', { name: 'Apurado TSE' });
+    await screen.findAllByRole('columnheader', { name: 'Apurado TSE' });
 
     fireEvent.change(screen.getByLabelText('Subcabo'), { target: { value: '11' } });
-    expect(within(screen.getByRole('table')).getByText('Pedro')).toBeInTheDocument();
-    expect(within(screen.getByRole('table')).queryByText('João')).not.toBeInTheDocument();
+    expect(within(screen.getAllByRole('table')[0]).getByText('Pedro')).toBeInTheDocument();
+    expect(within(screen.getAllByRole('table')[0]).queryByText('João')).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Subcabo'), { target: { value: '' } });
     fireEvent.change(screen.getByLabelText('Zona'), { target: { value: '03' } });
-    expect(within(screen.getByRole('table')).queryByText('Pedro')).not.toBeInTheDocument();
-    expect(within(screen.getByRole('table')).getByText('João')).toBeInTheDocument();
+    expect(within(screen.getAllByRole('table')[0]).queryByText('Pedro')).not.toBeInTheDocument();
+    expect(within(screen.getAllByRole('table')[0]).getByText('João')).toBeInTheDocument();
   });
 
   it('mostra apenas os subcabos vinculados ao cabo selecionado', async () => {
     render(<Crossing />);
     fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
-    await screen.findByRole('columnheader', { name: 'Apurado TSE' });
+    await screen.findAllByRole('columnheader', { name: 'Apurado TSE' });
 
     fireEvent.change(screen.getByLabelText('Cabo'), { target: { value: '10' } });
     const subcaboFilter = screen.getByLabelText('Subcabo');
@@ -93,6 +102,7 @@ describe('Crossing Page', () => {
       if (path === '/candidates') return Promise.resolve({ candidates: [{ id: 1, name: 'Keivia Dias' }] });
       if (path === '/dashboard/list?type=cabos' || path === '/dashboard/list?type=subcabos') return Promise.resolve({ items: [] });
       if (path.includes('/elections/comparativo-eleitores')) return Promise.resolve({ rows: [] });
+      if (path.includes('/elections/relatorio-faltantes')) return Promise.resolve({ summary: [], missing: [], totalCadastrados: 0, totalApurado: 0, totalFaltantes: 0 });
       return Promise.reject(new Error('unexpected path'));
     });
 
@@ -100,5 +110,15 @@ describe('Crossing Page', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
 
     await waitFor(() => expect(screen.getByText('Nenhum registro encontrado para os filtros atuais.')).toBeInTheDocument());
+  });
+
+  it('exibe o resumo por equipe e somente as zonas com votos faltantes', async () => {
+    render(<Crossing />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
+
+    expect(await screen.findByText('Resumo por cabo e subcabo')).toBeInTheDocument();
+    expect(screen.getByText('Total faltante')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Votos faltantes' })).toBeInTheDocument();
+    expect(screen.getByText('Relatório PDF')).toBeInTheDocument();
   });
 });

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import AppHeader from '../components/AppHeader';
-import { api, getUser } from '../lib/api';
+import { api, apiDownload, getUser } from '../lib/api';
 
 const inputStyle = {
   width: '100%',
@@ -26,6 +26,7 @@ export default function Crossing() {
   const [filtroZona, setFiltroZona] = useState('');
   const [filtroSecao, setFiltroSecao] = useState('');
   const [rows, setRows] = useState([]);
+  const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const me = getUser();
@@ -49,6 +50,7 @@ export default function Crossing() {
     let mounted = true;
     if (!candidatoNome) {
       setRows([]);
+      setReport(null);
       setError('');
       setLoading(false);
       return () => { mounted = false; };
@@ -56,13 +58,20 @@ export default function Crossing() {
 
     setLoading(true);
     setError('');
-    api(`/elections/comparativo-eleitores?candidateName=${encodeURIComponent(candidatoNome)}`)
-      .then((res) => {
-        if (mounted) setRows(res.rows || []);
+    const candidateQuery = `?candidateName=${encodeURIComponent(candidatoNome)}`;
+    Promise.all([
+      api(`/elections/comparativo-eleitores${candidateQuery}`),
+      api(`/elections/relatorio-faltantes${candidateQuery}`),
+    ])
+      .then(([comparison, summary]) => {
+        if (!mounted) return;
+        setRows(comparison.rows || []);
+        setReport(summary);
       })
       .catch(() => {
         if (mounted) {
           setRows([]);
+          setReport(null);
           setError('Não foi possível carregar a comparação eleitoral.');
         }
       })
@@ -72,6 +81,15 @@ export default function Crossing() {
 
     return () => { mounted = false; };
   }, [candidatoNome]);
+
+  async function downloadReport() {
+    try {
+      const query = `?candidateName=${encodeURIComponent(candidatoNome)}`;
+      await apiDownload(`/elections/relatorio-faltantes/pdf${query}`);
+    } catch (downloadError) {
+      setError(downloadError.message || 'Não foi possível gerar o PDF.');
+    }
+  }
 
   const filteredRows = useMemo(() => {
     const caboName = cabos.find((item) => String(item.id) === String(caboId))?.title || '';
@@ -199,6 +217,74 @@ export default function Crossing() {
                   </tbody>
                 </table>
               </div>
+            )}
+
+            {report && (
+              <section className="report-section" style={{ marginTop: 24 }} aria-labelledby="missing-report-title">
+                <div className="comparison-table-card" style={{ background: '#fff', borderRadius: 8, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
+                    <div>
+                      <h3 id="missing-report-title" style={{ margin: 0, color: '#0F172A' }}>Relatório de votos faltantes</h3>
+                      <p style={{ margin: '6px 0 0', color: '#64748B' }}>O excesso de cadastros não reduz a falta de outra zona.</p>
+                    </div>
+                    <button type="button" onClick={downloadReport} style={{ padding: '10px 14px', border: 0, borderRadius: 8, background: '#0F766E', color: 'white', fontWeight: 700, cursor: 'pointer' }}>
+                      Relatório PDF
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 24 }}>
+                    {[
+                      ['Cadastrados', report.totalCadastrados],
+                      ['Apurado nas seções com falta', report.totalApurado],
+                      ['Total faltante', report.totalFaltantes],
+                    ].map(([label, value]) => (
+                      <div key={label} style={{ padding: 14, borderRadius: 8, background: '#F8FAFC' }}>
+                        <strong style={{ display: 'block', fontSize: 24, color: label === 'Total faltante' ? '#BE123C' : '#0F172A' }}>{value}</strong>
+                        <span style={{ color: '#64748B', fontSize: 12 }}>{label}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <h4 style={{ margin: '0 0 10px', color: '#334155' }}>Resumo por cabo e subcabo</h4>
+                  <div style={{ overflowX: 'auto', marginBottom: 24 }}>
+                    <table style={{ width: '100%', minWidth: 560, borderCollapse: 'collapse', fontSize: 14 }}>
+                      <thead><tr style={{ background: '#F8FAFC', textAlign: 'left' }}>
+                        {['Cabo', 'Subcabo', 'Votos cadastrados', 'Seções'].map((heading) => <th key={heading} scope="col" style={{ padding: '10px 8px', borderBottom: '2px solid #E2E8F0', color: '#475569' }}>{heading}</th>)}
+                      </tr></thead>
+                      <tbody>{report.summary.map((row) => (
+                        <tr key={`${row.cabo}-${row.subcabo}`} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                          <td style={{ padding: '10px 8px', fontWeight: 600 }}>{row.cabo || '—'}</td>
+                          <td style={{ padding: '10px 8px' }}>{row.subcabo || '—'}</td>
+                          <td style={{ padding: '10px 8px', fontWeight: 700 }}>{row.cadastrados}</td>
+                          <td style={{ padding: '10px 8px' }}>{row.secoes}</td>
+                        </tr>
+                      ))}</tbody>
+                    </table>
+                  </div>
+
+                  <h4 style={{ margin: '0 0 10px', color: '#334155' }}>Zonas e seções com votos faltantes</h4>
+                  {report.missing.length === 0 ? (
+                    <div style={{ padding: 14, color: '#047857', background: '#ECFDF5', borderRadius: 8 }}>Nenhum voto faltante encontrado.</div>
+                  ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', minWidth: 560, borderCollapse: 'collapse', fontSize: 14 }}>
+                        <thead><tr style={{ background: '#FFF7ED', textAlign: 'left' }}>
+                          {['Zona', 'Seção', 'Cadastrados', 'Apurado TSE', 'Votos faltantes'].map((heading) => <th key={heading} scope="col" style={{ padding: '10px 8px', borderBottom: '2px solid #FED7AA', color: '#9A3412' }}>{heading}</th>)}
+                        </tr></thead>
+                        <tbody>{report.missing.map((row) => (
+                          <tr key={`${row.zona}-${row.secao}`} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                            <td style={{ padding: '10px 8px', fontWeight: 600 }}>{row.zona}</td>
+                            <td style={{ padding: '10px 8px', fontWeight: 600 }}>{row.secao}</td>
+                            <td style={{ padding: '10px 8px' }}>{row.cadastrados}</td>
+                            <td style={{ padding: '10px 8px' }}>{row.apurado}</td>
+                            <td style={{ padding: '10px 8px', color: '#BE123C', fontWeight: 800 }}>{row.faltantes}</td>
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </section>
             )}
           </>
         )}
