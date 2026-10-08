@@ -88,7 +88,7 @@ export default function Crossing() {
   return (
     <>
       <AppHeader title="Inteligência Eleitoral" subtitle="Auditoria de Urnas" />
-      <div className="page" style={{ paddingBottom: 104 }}>
+      <div className="page comparison-page" style={{ paddingBottom: 104 }}>
         <div style={{ marginBottom: 24 }}>
           <h2 style={{ margin: '0 0 6px', color: '#0F172A' }}>Comparativo por seção</h2>
           <p style={{ margin: 0, color: '#64748B' }}>
@@ -156,7 +156,7 @@ export default function Crossing() {
             ) : filteredRows.length === 0 ? (
               <div className="empty" style={{ textAlign: 'center', marginTop: 32 }}>Nenhum registro encontrado para os filtros atuais.</div>
             ) : (
-              <div style={{ background: '#fff', borderRadius: 8, padding: 16, overflowX: 'auto', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+              <div className="comparison-table-card" style={{ background: '#fff', borderRadius: 8, padding: 16, overflowX: 'auto', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 12 }}>
                   <div>
                     <h3 style={{ margin: 0, color: '#0F172A' }}>Cadastrados x apurado TSE</h3>
@@ -164,7 +164,7 @@ export default function Crossing() {
                   </div>
                   <strong style={{ color: '#2563EB', whiteSpace: 'nowrap' }}>{candidatoNome}</strong>
                 </div>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                <table className="comparison-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                   <thead>
                     <tr style={{ background: '#F8FAFC', textAlign: 'left' }}>
                       {['Cabo', 'Subcabo', 'Zona', 'Seção', 'Votos cadastrados', 'Apurado TSE', 'Status'].map((heading) => (

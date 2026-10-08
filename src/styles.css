@@ -166,6 +166,17 @@ a { color: inherit; }
   animation: page-fade-in 320ms cubic-bezier(.2, .8, .2, 1) both;
 }
 
+/* O comparativo precisa de largura para manter as sete colunas legíveis. */
+.comparison-page {
+  width: min(100%, 1440px);
+}
+.comparison-table-card {
+  width: 100%;
+}
+.comparison-table {
+  min-width: 980px;
+}
+
 .page-intro { margin-bottom: 20px; }
 .page-intro h2 {
   font-size: 32px;
@@ -802,6 +813,7 @@ button.stat { font: inherit; text-align: left; cursor: pointer; width: 100%; }
      só a Home (que tem .dashboard-grid) usa o container largo abaixo. */
   .page { width: min(100%, 720px); padding: 32px; }
   .page:has(.dashboard-grid) { width: min(100%, 1180px); }
+  .page.comparison-page { width: min(100%, 1440px); padding-inline: 24px; }
   .tabbar { width: min(100% - 32px, 620px); margin: 0 auto 16px; border: 1px solid var(--outline-variant); border-radius: 18px; box-shadow: 0 8px 30px rgba(25, 27, 35, .12); overflow: hidden; }
   .fab { right: max(32px, calc((100vw - 720px) / 2 + 32px)); bottom: 96px; }
   .dashboard-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: 16px; align-items: start; }
