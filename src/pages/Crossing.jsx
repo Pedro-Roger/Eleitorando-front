@@ -262,7 +262,7 @@ export default function Crossing() {
                   <div style={{ overflowX: 'auto', marginBottom: 24 }}>
                     <table style={{ width: '100%', minWidth: 560, borderCollapse: 'collapse', fontSize: 14 }}>
                       <thead><tr style={{ background: '#F8FAFC', textAlign: 'left' }}>
-                        {['Cabo', 'Subcabo', 'Prometidos', 'Confirmados TSE', 'Faltantes'].map((heading) => <th key={heading} scope="col" style={{ padding: '10px 8px', borderBottom: '2px solid #E2E8F0', color: '#475569' }}>{heading}</th>)}
+                        {['Cabo', 'Subcabo', 'Prometidos', 'Confirmados TSE', 'Faltantes', '% faltantes'].map((heading) => <th key={heading} scope="col" style={{ padding: '10px 8px', borderBottom: '2px solid #E2E8F0', color: '#475569' }}>{heading}</th>)}
                       </tr></thead>
                       <tbody>{report.summary.map((row) => (
                         <tr key={`${row.cabo}-${row.subcabo}`} style={{ borderBottom: '1px solid #F1F5F9' }}>
@@ -271,6 +271,7 @@ export default function Crossing() {
                           <td style={{ padding: '10px 8px', fontWeight: 700 }}>{row.cadastrados}</td>
                           <td style={{ padding: '10px 8px', fontWeight: 700 }}>{row.confirmados}</td>
                           <td style={{ padding: '10px 8px', color: row.faltantes ? '#BE123C' : '#047857', fontWeight: 700 }}>{row.faltantes}</td>
+                          <td style={{ padding: '10px 8px' }}>{row.percentualFaltantes ?? 0}%</td>
                         </tr>
                       ))}</tbody>
                     </table>
@@ -283,7 +284,7 @@ export default function Crossing() {
                     <div style={{ overflowX: 'auto' }}>
                       <table style={{ width: '100%', minWidth: 760, borderCollapse: 'collapse', fontSize: 14 }}>
                         <thead><tr style={{ background: '#FFF7ED', textAlign: 'left' }}>
-                          {['Cabo', 'Subcabo', 'Zona', 'Seção', 'Cadastrados', 'Confirmados TSE', 'Faltantes'].map((heading) => <th key={heading} scope="col" style={{ padding: '10px 8px', borderBottom: '2px solid #FED7AA', color: '#9A3412' }}>{heading}</th>)}
+                          {['Cabo', 'Subcabo', 'Zona', 'Seção', 'Prometidos', 'Confirmados TSE', 'Faltantes', '% faltantes'].map((heading) => <th key={heading} scope="col" style={{ padding: '10px 8px', borderBottom: '2px solid #FED7AA', color: '#9A3412' }}>{heading}</th>)}
                         </tr></thead>
                         <tbody>{reportDetails.map((row) => (
                           <tr key={`${row.cabo}-${row.subcabo}-${row.zona}-${row.secao}`} style={{ borderBottom: '1px solid #F1F5F9' }}>
@@ -294,6 +295,7 @@ export default function Crossing() {
                             <td style={{ padding: '10px 8px' }}>{row.cadastrados}</td>
                             <td style={{ padding: '10px 8px' }}>{row.confirmados}</td>
                             <td style={{ padding: '10px 8px', color: row.faltantes ? '#BE123C' : '#047857', fontWeight: 800 }}>{row.faltantes}</td>
+                            <td style={{ padding: '10px 8px' }}>{row.percentualFaltantes ?? 0}%</td>
                           </tr>
                         ))}</tbody>
                       </table>
