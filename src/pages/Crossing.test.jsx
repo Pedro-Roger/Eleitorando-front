@@ -149,4 +149,14 @@ describe('Crossing Page', () => {
     expect(screen.getByText('16,7% dos prometidos')).toBeInTheDocument();
     expect(screen.getByText('Exportar relatório PDF')).toBeInTheDocument();
   });
+
+  it('exibe o relatório nominal ao clicar no botão de nomes', async () => {
+    render(<Crossing />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Ver nomes dos eleitores' }));
+
+    expect(await screen.findByText(/Eleitores das seções abaixo da meta/)).toBeInTheDocument();
+    expect(api).toHaveBeenCalledWith(expect.stringContaining('/elections/relatorio-faltantes/eleitores?'));
+  });
 });

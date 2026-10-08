@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import AppHeader from '../components/AppHeader';
 import { api, apiDownload, getUser } from '../lib/api';
 
@@ -36,6 +36,7 @@ export default function Crossing() {
   const [report, setReport] = useState(null);
   const [missingVoters, setMissingVoters] = useState(null);
   const [missingVotersLoading, setMissingVotersLoading] = useState(false);
+  const missingVotersRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const me = getUser();
@@ -120,6 +121,11 @@ export default function Crossing() {
     try {
       const data = await api(`/elections/relatorio-faltantes/eleitores${reportQuery()}`);
       setMissingVoters(data.voters || []);
+      window.setTimeout(() => {
+        if (typeof missingVotersRef.current?.scrollIntoView === 'function') {
+          missingVotersRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 0);
     } catch (loadError) {
       setError(loadError.message || 'Não foi possível carregar os eleitores das seções faltantes.');
     } finally {
@@ -354,7 +360,7 @@ export default function Crossing() {
                   )}
 
                   {missingVoters && (
-                    <div style={{ marginTop: 24 }}>
+                    <div ref={missingVotersRef} style={{ marginTop: 24, scrollMarginTop: 20 }}>
                       <h4 style={{ margin: '0 0 10px', color: '#334155' }}>Eleitores das seções abaixo da meta ({missingVoters.length})</h4>
                       {missingVoters.length === 0 ? (
                         <div style={{ padding: 14, color: '#047857', background: '#ECFDF5', borderRadius: 8 }}>Nenhum eleitor encontrado nas seções faltantes.</div>
