@@ -16,6 +16,13 @@ function statusStyle(status) {
   return { color: '#BE123C', background: '#FFF1F2' };
 }
 
+function formatMissingPercentage(report) {
+  const promised = Number(report?.totalCadastrados) || 0;
+  const missing = Number(report?.totalFaltantes) || 0;
+  if (!promised) return '0,0%';
+  return `${((missing / promised) * 100).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
+}
+
 export default function Crossing() {
   const [candidatos, setCandidatos] = useState([]);
   const [candidatoNome, setCandidatoNome] = useState('');
@@ -293,6 +300,11 @@ export default function Crossing() {
                       <div key={label} style={{ padding: 14, borderRadius: 8, background: '#F8FAFC' }}>
                         <strong style={{ display: 'block', fontSize: 24, color: label === 'Faltantes' ? '#BE123C' : '#0F172A' }}>{value}</strong>
                         <span style={{ color: '#64748B', fontSize: 12 }}>{label}</span>
+                        {label === 'Faltantes' && (
+                          <span style={{ display: 'block', marginTop: 4, color: '#BE123C', fontSize: 12, fontWeight: 700 }}>
+                            {formatMissingPercentage(report)} dos prometidos
+                          </span>
+                        )}
                       </div>
                     ))}
                   </div>

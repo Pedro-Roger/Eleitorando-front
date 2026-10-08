@@ -146,6 +146,7 @@ describe('Crossing Page', () => {
     expect(await screen.findByText('Resumo por cabo e subcabo')).toBeInTheDocument();
     expect(screen.getAllByText('Faltantes').length).toBeGreaterThan(0);
     expect(screen.getAllByRole('columnheader', { name: 'Faltantes' }).length).toBeGreaterThan(0);
+    expect(screen.getByText('16,7% dos prometidos')).toBeInTheDocument();
     expect(screen.getByText('Exportar relatório PDF')).toBeInTheDocument();
   });
 });
