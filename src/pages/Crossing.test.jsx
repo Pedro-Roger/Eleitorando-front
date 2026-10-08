@@ -33,9 +33,13 @@ describe('Crossing Page', () => {
       if (path === '/candidates') {
         return Promise.resolve({ candidates: [{ id: 1, name: 'Keivia Dias' }, { id: 2, name: 'Erika Amorim' }] });
       }
-      if (path === '/dashboard/list?type=cabos') return Promise.resolve({ items: [{ id: 10, title: 'Felipe' }] });
+      if (path === '/dashboard/list?type=cabos') return Promise.resolve({ items: [{ id: 10, title: 'Felipe' }, { id: 20, title: 'Maria' }] });
       if (path === '/dashboard/list?type=subcabos') {
-        return Promise.resolve({ items: [{ id: 11, title: 'Pedro' }, { id: 12, title: 'João' }] });
+        return Promise.resolve({ items: [
+          { id: 11, title: 'Pedro', caboId: 10 },
+          { id: 12, title: 'João', caboId: 10 },
+          { id: 13, title: 'Ana', caboId: 20 },
+        ] });
       }
       if (path.includes('/elections/comparativo-eleitores')) return Promise.resolve({ rows });
       return Promise.reject(new Error(`unexpected path: ${path}`));
@@ -70,6 +74,18 @@ describe('Crossing Page', () => {
     fireEvent.change(screen.getByLabelText('Zona'), { target: { value: '03' } });
     expect(within(screen.getByRole('table')).queryByText('Pedro')).not.toBeInTheDocument();
     expect(within(screen.getByRole('table')).getByText('João')).toBeInTheDocument();
+  });
+
+  it('mostra apenas os subcabos vinculados ao cabo selecionado', async () => {
+    render(<Crossing />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
+    await screen.findByRole('columnheader', { name: 'Apurado TSE' });
+
+    fireEvent.change(screen.getByLabelText('Cabo'), { target: { value: '10' } });
+    const subcaboFilter = screen.getByLabelText('Subcabo');
+    expect(within(subcaboFilter).getByRole('option', { name: 'Pedro' })).toBeInTheDocument();
+    expect(within(subcaboFilter).getByRole('option', { name: 'João' })).toBeInTheDocument();
+    expect(within(subcaboFilter).queryByRole('option', { name: 'Ana' })).not.toBeInTheDocument();
   });
 
   it('mostra mensagem vazia quando a candidata não possui linhas', async () => {

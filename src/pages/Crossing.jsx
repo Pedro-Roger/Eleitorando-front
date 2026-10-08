@@ -85,6 +85,18 @@ export default function Crossing() {
     ));
   }, [rows, cabos, subcabos, caboId, subcaboId, filtroZona, filtroSecao]);
 
+  const visibleSubcabos = useMemo(() => (
+    caboId
+      ? subcabos.filter((subcabo) => String(subcabo.caboId) === String(caboId))
+      : subcabos
+  ), [subcabos, caboId]);
+
+  useEffect(() => {
+    if (subcaboId && !visibleSubcabos.some((subcabo) => String(subcabo.id) === String(subcaboId))) {
+      setSubcaboId('');
+    }
+  }, [subcaboId, visibleSubcabos]);
+
   return (
     <>
       <AppHeader title="Inteligência Eleitoral" subtitle="Auditoria de Urnas" />
@@ -136,7 +148,7 @@ export default function Crossing() {
                 <label htmlFor="filtro-subcabo" style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Subcabo</label>
                 <select id="filtro-subcabo" aria-label="Subcabo" value={subcaboId} onChange={(event) => setSubcaboId(event.target.value)} style={inputStyle}>
                   <option value="">Todos</option>
-                  {subcabos.map((subcabo) => <option key={subcabo.id} value={subcabo.id}>{subcabo.title}</option>)}
+                  {visibleSubcabos.map((subcabo) => <option key={subcabo.id} value={subcabo.id}>{subcabo.title}</option>)}
                 </select>
               </div>
               <div style={{ flex: '1 1 120px' }}>
