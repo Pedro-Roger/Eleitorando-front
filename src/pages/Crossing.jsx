@@ -15,7 +15,7 @@ export default function Crossing() {
   const [filtroZona, setFiltroZona] = useState('');
   const [filtroSecao, setFiltroSecao] = useState('');
   const [apenasComColeta, setApenasComColeta] = useState(true);
-  const [viewMode, setViewMode] = useState('lista');
+  const [viewMode, setViewMode] = useState('secao');
 
   const [rawSections, setRawSections] = useState([]);
   const [votersReport, setVotersReport] = useState([]);
@@ -130,87 +130,90 @@ export default function Crossing() {
         <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
           <button 
             onClick={() => setViewMode('secao')}
-            style={{ padding: '8px 16px', background: viewMode === 'secao' ? '#0F172A' : '#E2E8F0', color: viewMode === 'secao' ? 'white' : 'black', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 'bold' }}
+            style={{ padding: '8px 16px', background: viewMode === 'secao' ? '#0F172A' : '#E2E8F0', color: viewMode === 'secao' ? 'white' : '#1E293B', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 'bold' }}
           >Visão por Seção</button>
           <button 
             onClick={() => setViewMode('lista')}
-            style={{ padding: '8px 16px', background: viewMode === 'lista' ? '#0F172A' : '#E2E8F0', color: viewMode === 'lista' ? 'white' : 'black', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 'bold' }}
+            style={{ padding: '8px 16px', background: viewMode === 'lista' ? '#0F172A' : '#E2E8F0', color: viewMode === 'lista' ? 'white' : '#1E293B', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 'bold' }}
           >Relatório de Eleitores</button>
         </div>
 
-        {me?.role === 'ADMIN' && (
-          <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
-            <div style={{ flex: '1 1 200px' }}>
-              <label style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Cabo Eleitoral</label>
-              <select 
-                value={caboId} 
-                onChange={e => { setCaboId(e.target.value); setSubcaboId(''); }} 
-                style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #CBD5E1', background: 'white' }}
+        {viewMode === 'secao' && (
+          <div style={{ display: 'flex', gap: 8, marginBottom: 24, overflowX: 'auto', paddingBottom: 8 }}>
+            {candidatos.map(c => (
+              <button 
+                key={c.id} 
+                onClick={() => setCandidatoNome(c.name)}
+                style={{ 
+                  flex: '0 0 auto', 
+                  padding: '12px 24px', 
+                  background: candidatoNome === c.name ? '#2563EB' : '#E2E8F0',
+                  color: candidatoNome === c.name ? 'white' : '#1E293B',
+                  borderRadius: 8,
+                  border: 'none',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
               >
-                <option value="">Todos</option>
-                {cabos.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
-              </select>
+                {c.name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {(candidatoNome || viewMode === 'lista') && (
+          <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap', background: '#F8FAFC', padding: 16, borderRadius: 8 }}>
+            {me?.role === 'ADMIN' && (
+              <>
+                <div style={{ flex: '1 1 150px' }}>
+                  <label style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Cabo Eleitoral</label>
+                  <select 
+                    value={caboId} 
+                    onChange={e => { setCaboId(e.target.value); setSubcaboId(''); }} 
+                    style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #CBD5E1', background: 'white' }}
+                  >
+                    <option value="">Todos</option>
+                    {cabos.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                  </select>
+                </div>
+                <div style={{ flex: '1 1 150px' }}>
+                  <label style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Subcabo</label>
+                  <select 
+                    value={subcaboId} 
+                    onChange={e => { setSubcaboId(e.target.value); setCaboId(''); }} 
+                    style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #CBD5E1', background: 'white' }}
+                  >
+                    <option value="">Todos</option>
+                    {subcabos.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
+                  </select>
+                </div>
+              </>
+            )}
+            <div style={{ flex: '1 1 100px' }}>
+              <label style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Zona</label>
+              <input 
+                type="text"
+                placeholder="Ex: 120"
+                value={filtroZona} 
+                onChange={e => setFiltroZona(e.target.value)} 
+                style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #CBD5E1' }}
+              />
             </div>
-            <div style={{ flex: '1 1 200px' }}>
-              <label style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Subcabo</label>
-              <select 
-                value={subcaboId} 
-                onChange={e => { setSubcaboId(e.target.value); setCaboId(''); }} 
-                style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #CBD5E1', background: 'white' }}
-              >
-                <option value="">Todos</option>
-                {subcabos.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
-              </select>
+            <div style={{ flex: '1 1 100px' }}>
+              <label style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Seção</label>
+              <input 
+                type="text"
+                placeholder="Ex: 410"
+                value={filtroSecao} 
+                onChange={e => setFiltroSecao(e.target.value)} 
+                style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #CBD5E1' }}
+              />
             </div>
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
-          <div style={{ flex: '1 1 80px' }}>
-            <label style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Zona</label>
-            <input 
-              type="text"
-              placeholder="Ex: 120"
-              value={filtroZona} 
-              onChange={e => setFiltroZona(e.target.value)} 
-              style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #CBD5E1' }}
-            />
-          </div>
-          <div style={{ flex: '1 1 80px' }}>
-            <label style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Seção</label>
-            <input 
-              type="text"
-              placeholder="Ex: 410"
-              value={filtroSecao} 
-              onChange={e => setFiltroSecao(e.target.value)} 
-              style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #CBD5E1' }}
-            />
-          </div>
-        </div>
-
         {viewMode === 'secao' && (
           <>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 16, overflowX: 'auto', paddingBottom: 8 }}>
-              {candidatos.map(c => (
-                <button 
-                  key={c.id} 
-                  onClick={() => setCandidatoNome(c.name)}
-                  style={{ 
-                    flex: '0 0 auto', 
-                    padding: '12px 24px', 
-                    background: candidatoNome === c.name ? '#2563EB' : '#E2E8F0',
-                    color: candidatoNome === c.name ? 'white' : '#1E293B',
-                    borderRadius: 8,
-                    border: 'none',
-                    fontWeight: 'bold',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {c.name}
-                </button>
-              ))}
-            </div>
-
             {candidatoNome && (
               <div style={{ width: '100%', marginBottom: 16 }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, color: '#475569' }}>
