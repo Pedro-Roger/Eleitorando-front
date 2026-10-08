@@ -1,344 +1,194 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import AppHeader from '../components/AppHeader';
 import { api, getUser } from '../lib/api';
 
+const inputStyle = {
+  width: '100%',
+  padding: '10px 12px',
+  borderRadius: 8,
+  border: '1px solid #CBD5E1',
+  background: 'white',
+};
 
+function statusStyle(status) {
+  if (status === 'OK') return { color: '#047857', background: '#ECFDF5' };
+  if (status.startsWith('Faltam')) return { color: '#B45309', background: '#FFFBEB' };
+  return { color: '#BE123C', background: '#FFF1F2' };
+}
 
 export default function Crossing() {
   const [candidatos, setCandidatos] = useState([]);
   const [candidatoNome, setCandidatoNome] = useState('');
-  
   const [cabos, setCabos] = useState([]);
   const [subcabos, setSubcabos] = useState([]);
   const [caboId, setCaboId] = useState('');
   const [subcaboId, setSubcaboId] = useState('');
   const [filtroZona, setFiltroZona] = useState('');
   const [filtroSecao, setFiltroSecao] = useState('');
-  const [apenasComColeta, setApenasComColeta] = useState(true);
-  const [viewMode, setViewMode] = useState('secao');
-
-  const [rawSections, setRawSections] = useState([]);
-  const [votersReport, setVotersReport] = useState([]);
-  const [totais, setTotais] = useState({ tse: 0, coletado: 0 });
+  const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const me = getUser();
 
   useEffect(() => {
-    api('/candidates').then(data => {
-      setCandidatos(data.candidates || []);
-    }).catch(() => setCandidatos([]));
+    api('/candidates')
+      .then((data) => setCandidatos(data.candidates || []))
+      .catch(() => setCandidatos([]));
 
     if (me?.role === 'ADMIN') {
-      api('/dashboard/list?type=cabos').then(res => setCabos(res.items || [])).catch(console.error);
-      api('/dashboard/list?type=subcabos').then(res => setSubcabos(res.items || [])).catch(console.error);
+      api('/dashboard/list?type=cabos')
+        .then((res) => setCabos(res.items || []))
+        .catch(() => setCabos([]));
+      api('/dashboard/list?type=subcabos')
+        .then((res) => setSubcabos(res.items || []))
+        .catch(() => setSubcabos([]));
     }
-  }, [me]);
+  }, [me?.role]);
 
   useEffect(() => {
-    let isMounted = true;
-    
-    if (viewMode === 'lista') {
-      setLoading(true);
-      api('/elections/relatorio-eleitores').then(res => {
-        if (!isMounted) return;
-        setVotersReport(res.items || []);
-        setLoading(false);
-      }).catch(err => {
-        console.error(err);
-        if (isMounted) setLoading(false);
-      });
-      return () => { isMounted = false; };
-    }
-
+    let mounted = true;
     if (!candidatoNome) {
-      setRawSections([]);
-      setTotais({ tse: 0, coletado: 0 });
-      return;
+      setRows([]);
+      setError('');
+      setLoading(false);
+      return () => { mounted = false; };
     }
-    
+
     setLoading(true);
-
-    let url = `/elections/comparativo-zona?candidateName=${encodeURIComponent(candidatoNome)}&limit=9999`;
-    if (caboId) url += `&caboId=${caboId}`;
-    if (subcaboId) url += `&subcaboId=${subcaboId}`;
-
-    api(url)
-      .then(res => {
-        if (!isMounted) return;
-        setRawSections(res.sections || []);
-        setTotais({ tse: res.totalTseVotes || 0, coletado: res.totalCollectedVoters || 0 });
-        setLoading(false);
+    setError('');
+    api(`/elections/comparativo-eleitores?candidateName=${encodeURIComponent(candidatoNome)}`)
+      .then((res) => {
+        if (mounted) setRows(res.rows || []);
       })
-      .catch(err => {
-        console.error(err);
-        if (isMounted) setLoading(false);
+      .catch(() => {
+        if (mounted) {
+          setRows([]);
+          setError('Não foi possível carregar a comparação eleitoral.');
+        }
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
       });
-      
-    return () => { isMounted = false; };
-  }, [candidatoNome, caboId, subcaboId, viewMode]);
 
-  const { data, overflow } = useMemo(() => {
-    if (viewMode !== 'secao') return { data: {}, overflow: false };
-    let filtered = rawSections;
-    if (filtroZona) filtered = filtered.filter(s => String(s.zona).includes(filtroZona));
-    if (filtroSecao) filtered = filtered.filter(s => String(s.secao).includes(filtroSecao));
-    if (apenasComColeta) filtered = filtered.filter(s => Number(s.coletado) > 0);
+    return () => { mounted = false; };
+  }, [candidatoNome]);
 
-    let overflow = false;
-    if (filtered.length > 200) {
-      filtered = filtered.slice(0, 200);
-      overflow = true;
-    }
+  const filteredRows = useMemo(() => {
+    const caboName = cabos.find((item) => String(item.id) === String(caboId))?.title || '';
+    const subcaboName = subcabos.find((item) => String(item.id) === String(subcaboId))?.title || '';
 
-    const byCity = {};
-    filtered.forEach(item => {
-      const cityName = item.city || 'Desconhecida';
-      if (!byCity[cityName]) {
-        byCity[cityName] = [];
-      }
-      byCity[cityName].push(item);
-    });
-    
-    for (const city of Object.keys(byCity)) {
-      byCity[city].sort((a, b) => Number(a.zona) - Number(b.zona) || Number(a.secao) - Number(b.secao));
-    }
-    return { data: byCity, overflow };
-  }, [rawSections, filtroZona, filtroSecao, apenasComColeta, viewMode]);
-
-  const filteredVoters = useMemo(() => {
-    if (viewMode !== 'lista') return [];
-    let list = votersReport;
-    if (caboId) {
-      const cTitle = cabos.find(c => String(c.id) === String(caboId))?.title || '';
-      list = list.filter(v => v.caboFinalName === cTitle);
-    }
-    if (subcaboId) {
-      const sTitle = subcabos.find(s => String(s.id) === String(subcaboId))?.title || '';
-      list = list.filter(v => v.subcaboName === sTitle);
-    }
-    if (filtroZona) list = list.filter(v => String(v.zone).includes(filtroZona));
-    if (filtroSecao) list = list.filter(v => String(v.section).includes(filtroSecao));
-    
-    return list;
-  }, [votersReport, caboId, subcaboId, filtroZona, filtroSecao, cabos, subcabos, viewMode]);
+    return rows.filter((row) => (
+      (!caboName || row.cabo === caboName)
+      && (!subcaboName || row.subcabo === subcaboName)
+      && (!filtroZona || String(row.zona).includes(filtroZona))
+      && (!filtroSecao || String(row.secao).includes(filtroSecao))
+    ));
+  }, [rows, cabos, subcabos, caboId, subcaboId, filtroZona, filtroSecao]);
 
   return (
     <>
       <AppHeader title="Inteligência Eleitoral" subtitle="Auditoria de Urnas" />
       <div className="page" style={{ paddingBottom: 104 }}>
-        
-        <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
-          <button 
-            onClick={() => setViewMode('secao')}
-            style={{ padding: '8px 16px', background: viewMode === 'secao' ? '#0F172A' : '#E2E8F0', color: viewMode === 'secao' ? 'white' : '#1E293B', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 'bold' }}
-          >Visão por Seção</button>
-          <button 
-            onClick={() => setViewMode('lista')}
-            style={{ padding: '8px 16px', background: viewMode === 'lista' ? '#0F172A' : '#E2E8F0', color: viewMode === 'lista' ? 'white' : '#1E293B', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 'bold' }}
-          >Relatório de Eleitores</button>
+        <div style={{ marginBottom: 24 }}>
+          <h2 style={{ margin: '0 0 6px', color: '#0F172A' }}>Comparativo por seção</h2>
+          <p style={{ margin: 0, color: '#64748B' }}>
+            Veja o que cada equipe cadastrou e compare com a apuração oficial do TSE.
+          </p>
         </div>
 
-        {viewMode === 'secao' && (
-          <div style={{ display: 'flex', gap: 8, marginBottom: 24, overflowX: 'auto', paddingBottom: 8 }}>
-            {candidatos.map(c => (
-              <button 
-                key={c.id} 
-                onClick={() => setCandidatoNome(c.name)}
-                style={{ 
-                  flex: '0 0 auto', 
-                  padding: '12px 24px', 
-                  background: candidatoNome === c.name ? '#2563EB' : '#E2E8F0',
-                  color: candidatoNome === c.name ? 'white' : '#1E293B',
-                  borderRadius: 8,
-                  border: 'none',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                {c.name}
-              </button>
-            ))}
-          </div>
-        )}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 24, overflowX: 'auto', paddingBottom: 8 }}>
+          {candidatos.map((candidato) => (
+            <button
+              key={candidato.id}
+              type="button"
+              onClick={() => setCandidatoNome(candidato.name)}
+              style={{
+                flex: '0 0 auto',
+                padding: '12px 24px',
+                background: candidatoNome === candidato.name ? '#2563EB' : '#E2E8F0',
+                color: candidatoNome === candidato.name ? 'white' : '#1E293B',
+                borderRadius: 8,
+                border: 'none',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+              }}
+            >
+              {candidato.name}
+            </button>
+          ))}
+        </div>
 
-        {(candidatoNome || viewMode === 'lista') && (
-          <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap', background: '#F8FAFC', padding: 16, borderRadius: 8 }}>
-            {me?.role === 'ADMIN' && (
-              <>
-                <div style={{ flex: '1 1 150px' }}>
-                  <label style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Cabo Eleitoral</label>
-                  <select 
-                    value={caboId} 
-                    onChange={e => { setCaboId(e.target.value); setSubcaboId(''); }} 
-                    style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #CBD5E1', background: 'white' }}
-                  >
-                    <option value="">Todos</option>
-                    {cabos.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
-                  </select>
-                </div>
-                <div style={{ flex: '1 1 150px' }}>
-                  <label style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Subcabo</label>
-                  <select 
-                    value={subcaboId} 
-                    onChange={e => { setSubcaboId(e.target.value); setCaboId(''); }} 
-                    style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #CBD5E1', background: 'white' }}
-                  >
-                    <option value="">Todos</option>
-                    {subcabos.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
-                  </select>
-                </div>
-              </>
-            )}
-            <div style={{ flex: '1 1 100px' }}>
-              <label style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Zona</label>
-              <input 
-                type="text"
-                placeholder="Ex: 120"
-                value={filtroZona} 
-                onChange={e => setFiltroZona(e.target.value)} 
-                style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #CBD5E1' }}
-              />
-            </div>
-            <div style={{ flex: '1 1 100px' }}>
-              <label style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Seção</label>
-              <input 
-                type="text"
-                placeholder="Ex: 410"
-                value={filtroSecao} 
-                onChange={e => setFiltroSecao(e.target.value)} 
-                style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #CBD5E1' }}
-              />
-            </div>
+        {!candidatoNome ? (
+          <div className="empty" style={{ textAlign: 'center', marginTop: 32 }}>
+            Selecione uma candidata para ver a comparação.
           </div>
-        )}
-
-        {viewMode === 'secao' && (
+        ) : (
           <>
-            {candidatoNome && (
-              <div style={{ width: '100%', marginBottom: 16 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, color: '#475569' }}>
-                  <input type="checkbox" checked={apenasComColeta} onChange={e => setApenasComColeta(e.target.checked)} />
-                  Mostrar apenas seções com eleitores cadastrados
-                </label>
+            <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap', background: '#F8FAFC', padding: 16, borderRadius: 8 }}>
+              <div style={{ flex: '1 1 160px' }}>
+                <label htmlFor="filtro-cabo" style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Cabo</label>
+                <select id="filtro-cabo" aria-label="Cabo" value={caboId} onChange={(event) => setCaboId(event.target.value)} style={inputStyle}>
+                  <option value="">Todos</option>
+                  {cabos.map((cabo) => <option key={cabo.id} value={cabo.id}>{cabo.title}</option>)}
+                </select>
               </div>
-            )}
+              <div style={{ flex: '1 1 160px' }}>
+                <label htmlFor="filtro-subcabo" style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Subcabo</label>
+                <select id="filtro-subcabo" aria-label="Subcabo" value={subcaboId} onChange={(event) => setSubcaboId(event.target.value)} style={inputStyle}>
+                  <option value="">Todos</option>
+                  {subcabos.map((subcabo) => <option key={subcabo.id} value={subcabo.id}>{subcabo.title}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: '1 1 120px' }}>
+                <label htmlFor="filtro-zona" style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Zona</label>
+                <input id="filtro-zona" aria-label="Zona" type="text" placeholder="Ex: 120" value={filtroZona} onChange={(event) => setFiltroZona(event.target.value)} style={inputStyle} />
+              </div>
+              <div style={{ flex: '1 1 120px' }}>
+                <label htmlFor="filtro-secao" style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Seção</label>
+                <input id="filtro-secao" aria-label="Seção" type="text" placeholder="Ex: 0533" value={filtroSecao} onChange={(event) => setFiltroSecao(event.target.value)} style={inputStyle} />
+              </div>
+            </div>
 
-            {candidatoNome && rawSections.length > 0 && (
-              <div style={{ background: '#0F172A', color: 'white', padding: 20, borderRadius: 8, marginBottom: 24, display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
-                <div style={{ textAlign: 'center' }}>
-                  <span style={{ display: 'block', fontSize: 14, color: '#94A3B8', marginBottom: 4 }}>Total Sistema (Eleitorando)</span>
-                  <strong style={{ fontSize: 28, color: '#10B981' }}>{totais.coletado}</strong>
-                </div>
-                <div style={{ width: 1, height: 40, background: '#334155' }}></div>
-                <div style={{ textAlign: 'center' }}>
-                  <span style={{ display: 'block', fontSize: 14, color: '#94A3B8', marginBottom: 4 }}>Total Oficial (TSE)</span>
-                  <strong style={{ fontSize: 28, color: '#38BDF8' }}>{totais.tse}</strong>
-                </div>
-              </div>
-            )}
-
-            {overflow && (
-              <div style={{ padding: 12, background: '#FEF3C7', color: '#B45309', borderRadius: 8, marginBottom: 16, fontWeight: 'bold' }}>
-                Mostrando as 200 primeiras seções. Use os filtros de Zona, Seção ou Cabo para achar o que precisa.
-              </div>
-            )}
-
-            {!candidatoNome ? (
-              <div className="empty" style={{ textAlign: 'center', marginTop: 32 }}>
-                Selecione uma candidata acima.
-              </div>
-            ) : loading ? (
-              <div className="empty" style={{ textAlign: 'center', marginTop: 32 }}>
-                Carregando dados...
-              </div>
-            ) : Object.keys(data).length === 0 ? (
-              <div className="empty" style={{ textAlign: 'center', marginTop: 32 }}>
-                Nenhum dado encontrado para os filtros atuais.
-              </div>
+            {loading ? (
+              <div className="empty" style={{ textAlign: 'center', marginTop: 32 }}>Carregando comparação...</div>
+            ) : error ? (
+              <div className="empty" style={{ textAlign: 'center', marginTop: 32, color: '#BE123C' }}>{error}</div>
+            ) : filteredRows.length === 0 ? (
+              <div className="empty" style={{ textAlign: 'center', marginTop: 32 }}>Nenhum registro encontrado para os filtros atuais.</div>
             ) : (
-              Object.keys(data).sort().map(cidade => (
-                <div key={cidade} style={{ marginBottom: 24, background: '#fff', borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                  <div style={{ background: '#F8FAFC', padding: '12px 16px', borderBottom: '1px solid #E2E8F0' }}>
-                    <h3 style={{ margin: 0, fontSize: 18, color: '#0F172A' }}>{cidade}</h3>
+              <div style={{ background: '#fff', borderRadius: 8, padding: 16, overflowX: 'auto', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 12 }}>
+                  <div>
+                    <h3 style={{ margin: 0, color: '#0F172A' }}>Cadastrados x apurado TSE</h3>
+                    <span style={{ color: '#64748B', fontSize: 13 }}>{filteredRows.length} agrupamento(s) encontrado(s)</span>
                   </div>
-                  
-                  <div style={{ padding: 16, overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-                      <thead>
-                        <tr style={{ background: '#F8FAFC', textAlign: 'left' }}>
-                          <th style={{ padding: '12px 8px', borderBottom: '2px solid #E2E8F0', color: '#475569' }}>Zona</th>
-                          <th style={{ padding: '12px 8px', borderBottom: '2px solid #E2E8F0', color: '#475569' }}>Seção</th>
-                          <th style={{ padding: '12px 8px', borderBottom: '2px solid #E2E8F0', color: '#475569' }}>Eleitores (Sistema)</th>
-                          <th style={{ padding: '12px 8px', borderBottom: '2px solid #E2E8F0', color: '#475569' }}>Votos (TSE)</th>
-                          <th style={{ padding: '12px 8px', borderBottom: '2px solid #E2E8F0', color: '#475569' }}>Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {data[cidade].map(item => {
-                          const key = `${item.zona}-${item.secao}`;
-                          const divergencia = item.coletado > item.tse;
-                          const color = divergencia ? '#E11D48' : '#10B981';
-                          
-                          return (
-                            <tr key={key} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                              <td style={{ padding: '12px 8px', fontWeight: '500' }}>{item.zona}</td>
-                              <td style={{ padding: '12px 8px', fontWeight: '500' }}>{item.secao}</td>
-                              <td style={{ padding: '12px 8px', color: divergencia ? '#E11D48' : '#0F172A', fontWeight: 'bold' }}>{item.coletado}</td>
-                              <td style={{ padding: '12px 8px', color: '#0F172A', fontWeight: 'bold' }}>{item.tse}</td>
-                              <td style={{ padding: '12px 8px', color: color, fontWeight: 'bold' }}>
-                                {divergencia ? `⚠️ Faltam ${item.coletado - item.tse} votos` : '✓ OK'}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                  <strong style={{ color: '#2563EB', whiteSpace: 'nowrap' }}>{candidatoNome}</strong>
                 </div>
-              ))
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                  <thead>
+                    <tr style={{ background: '#F8FAFC', textAlign: 'left' }}>
+                      {['Cabo', 'Subcabo', 'Zona', 'Seção', 'Votos cadastrados', 'Apurado TSE', 'Status'].map((heading) => (
+                        <th key={heading} scope="col" style={{ padding: '12px 8px', borderBottom: '2px solid #E2E8F0', color: '#475569', whiteSpace: 'nowrap' }}>{heading}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredRows.map((row) => (
+                      <tr key={`${row.cabo}-${row.subcabo}-${row.zona}-${row.secao}`} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                        <td style={{ padding: '12px 8px', fontWeight: 600 }}>{row.cabo || '—'}</td>
+                        <td style={{ padding: '12px 8px' }}>{row.subcabo || '—'}</td>
+                        <td style={{ padding: '12px 8px', fontWeight: 600 }}>{row.zona}</td>
+                        <td style={{ padding: '12px 8px', fontWeight: 600 }}>{row.secao}</td>
+                        <td style={{ padding: '12px 8px', fontWeight: 700 }}>{row.cadastrados}</td>
+                        <td style={{ padding: '12px 8px', fontWeight: 700 }}>{row.apurado}</td>
+                        <td style={{ padding: '12px 8px' }}><span style={{ ...statusStyle(row.status), display: 'inline-block', padding: '4px 8px', borderRadius: 999, fontWeight: 700, whiteSpace: 'nowrap' }}>{row.status}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </>
-        )}
-
-        {viewMode === 'lista' && (
-          <div style={{ background: '#fff', borderRadius: 8, padding: 16, overflowX: 'auto', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-            <h2 style={{marginTop: 0, fontSize: 18, color: '#0F172A'}}>Relatório de Eleitores Cadastrados</h2>
-            
-            {loading ? (
-              <div style={{ padding: 20, textAlign: 'center' }}>Carregando...</div>
-            ) : filteredVoters.length === 0 ? (
-              <div style={{ padding: 20, textAlign: 'center', color: '#64748B' }}>
-                Nenhum eleitor cadastrado com Zona e Seção preenchidas.
-              </div>
-            ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-                <thead>
-                  <tr style={{ background: '#F8FAFC', textAlign: 'left' }}>
-                    <th style={{ padding: '12px 8px', borderBottom: '2px solid #E2E8F0', color: '#475569' }}>Eleitor</th>
-                    <th style={{ padding: '12px 8px', borderBottom: '2px solid #E2E8F0', color: '#475569' }}>Cabo/Subcabo</th>
-                    <th style={{ padding: '12px 8px', borderBottom: '2px solid #E2E8F0', color: '#475569' }}>Cidade</th>
-                    <th style={{ padding: '12px 8px', borderBottom: '2px solid #E2E8F0', color: '#475569' }}>Zona / Seção</th>
-                    <th style={{ padding: '12px 8px', borderBottom: '2px solid #E2E8F0', color: '#475569' }}>Cadastros na Seção</th>
-                    <th style={{ padding: '12px 8px', borderBottom: '2px solid #E2E8F0', color: '#10B981' }}>Keivia TSE</th>
-                    <th style={{ padding: '12px 8px', borderBottom: '2px solid #E2E8F0', color: '#38BDF8' }}>Erika TSE</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredVoters.map(v => (
-                    <tr key={v.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                      <td style={{ padding: '12px 8px', fontWeight: '500' }}>{v.name}</td>
-                      <td style={{ padding: '12px 8px' }}>{v.subcaboName || v.caboFinalName || v.creatorName}</td>
-                      <td style={{ padding: '12px 8px' }}>{v.city || '-'}</td>
-                      <td style={{ padding: '12px 8px' }}>{v.zone} / {v.section}</td>
-                      <td style={{ padding: '12px 8px', fontWeight: 'bold' }}>{v.cadastrosSecao}</td>
-                      <td style={{ padding: '12px 8px', color: '#10B981', fontWeight: 'bold' }}>{v.tseKeivia}</td>
-                      <td style={{ padding: '12px 8px', color: '#38BDF8', fontWeight: 'bold' }}>{v.tseErika}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
         )}
       </div>
     </>

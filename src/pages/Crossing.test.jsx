@@ -1,74 +1,88 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 import Crossing from './Crossing';
 import { api } from '../lib/api';
 
+const adminUser = vi.hoisted(() => ({ role: 'ADMIN' }));
+
 vi.mock('../components/AppHeader', () => ({
-  default: ({ title, subtitle }) => (
-    <div data-testid="app-header">{title} - {subtitle}</div>
-  )
+  default: ({ title, subtitle }) => <div data-testid="app-header">{title} - {subtitle}</div>,
 }));
+
 vi.mock('../lib/api', () => ({
-  api: vi.fn()
+  api: vi.fn(),
+  getUser: vi.fn(() => adminUser),
 }));
+
+const rows = [
+  {
+    cabo: 'Felipe', subcabo: 'Pedro', zona: '02', secao: '0533',
+    cadastrados: 2, apurado: 3, diferenca: -1, status: 'Apurado excede em 1',
+  },
+  {
+    cabo: 'Felipe', subcabo: 'João', zona: '03', secao: '0987',
+    cadastrados: 4, apurado: 5, diferenca: -1, status: 'Apurado excede em 1',
+  },
+];
 
 describe('Crossing Page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  it('exibe mensagem pedindo para selecionar candidato inicialmente', async () => {
-    api.mockResolvedValueOnce({ candidates: [{ id: 1, name: 'Keiva Dias' }] });
-    render(<Crossing />);
-    
-    expect(screen.getByText('Selecione um candidato para ver os dados.')).toBeInTheDocument();
-  });
-
-  it('carrega e renderiza os dados de auditoria após seleção de candidato', async () => {
     api.mockImplementation((path) => {
-      if (path === '/candidates') return Promise.resolve({ candidates: [{ id: 1, name: 'Keiva Dias', nome: 'Keiva Dias' }] });
-      if (path.includes('/elections/comparativo-zona?candidateName=Keiva%20Dias')) return Promise.resolve({ sections: [
-        { zona: 1, secao: 10, coletado: 100, tse: 100 },
-        { zona: 2, secao: 20, coletado: 120, tse: 100 }
-      ] });
-      return Promise.reject(new Error('not found'));
+      if (path === '/candidates') {
+        return Promise.resolve({ candidates: [{ id: 1, name: 'Keivia Dias' }, { id: 2, name: 'Erika Amorim' }] });
+      }
+      if (path === '/dashboard/list?type=cabos') return Promise.resolve({ items: [{ id: 10, title: 'Felipe' }] });
+      if (path === '/dashboard/list?type=subcabos') {
+        return Promise.resolve({ items: [{ id: 11, title: 'Pedro' }, { id: 12, title: 'João' }] });
+      }
+      if (path.includes('/elections/comparativo-eleitores')) return Promise.resolve({ rows });
+      return Promise.reject(new Error(`unexpected path: ${path}`));
     });
-    
-    render(<Crossing />);
-    
-    // Aguarda o dropdown ter a opção
-    const option = await screen.findByText('Keiva Dias');
-    const select = screen.getByRole('combobox');
-    
-    fireEvent.change(select, { target: { value: 'Keiva Dias' } });
-    
-    expect(screen.getByText('Carregando auditoria...')).toBeInTheDocument();
-    
-    await waitFor(() => {
-      expect(screen.getByText('Zona 1 — Seção 10')).toBeInTheDocument();
-    });
-
-    expect(screen.getByText('✓ 100% Batido')).toBeInTheDocument();
-    
-    expect(screen.getByText('Zona 2 — Seção 20')).toBeInTheDocument();
-    expect(screen.getByText('⚠️ Divergência: 20 votos')).toBeInTheDocument();
   });
 
-  it('renderiza vazio se não houver dados para o candidato', async () => {
-    api.mockImplementation((path) => {
-      if (path === '/candidates') return Promise.resolve({ candidates: [{ id: 1, name: 'Keiva Dias', nome: 'Keiva Dias' }] });
-      if (path.includes('/elections/comparativo-zona')) return Promise.resolve({ sections: [] });
-      return Promise.reject(new Error('not found'));
-    });
-    
+  it('exibe os agrupamentos cadastrados e o apurado TSE após escolher candidata', async () => {
     render(<Crossing />);
-    
-    const select = await screen.findByRole('combobox');
-    fireEvent.change(select, { target: { value: 'Keiva Dias' } });
-    
-    await waitFor(() => {
-      expect(screen.getByText('Nenhum dado encontrado.')).toBeInTheDocument();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
+
+    expect(await screen.findByText('Carregando comparação...')).toBeInTheDocument();
+    expect(await screen.findByRole('columnheader', { name: 'Votos cadastrados' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Apurado TSE' })).toBeInTheDocument();
+    const table = screen.getByRole('table');
+    expect(within(table).getByText('Pedro')).toBeInTheDocument();
+    expect(within(table).getByText('0533')).toBeInTheDocument();
+    expect(within(table).getByText('2')).toBeInTheDocument();
+    expect(within(table).getByText('3')).toBeInTheDocument();
+  });
+
+  it('filtra a tabela por subcabo e zona sem remover os demais filtros', async () => {
+    render(<Crossing />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
+    await screen.findByRole('columnheader', { name: 'Apurado TSE' });
+
+    fireEvent.change(screen.getByLabelText('Subcabo'), { target: { value: '11' } });
+    expect(within(screen.getByRole('table')).getByText('Pedro')).toBeInTheDocument();
+    expect(within(screen.getByRole('table')).queryByText('João')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Subcabo'), { target: { value: '' } });
+    fireEvent.change(screen.getByLabelText('Zona'), { target: { value: '03' } });
+    expect(within(screen.getByRole('table')).queryByText('Pedro')).not.toBeInTheDocument();
+    expect(within(screen.getByRole('table')).getByText('João')).toBeInTheDocument();
+  });
+
+  it('mostra mensagem vazia quando a candidata não possui linhas', async () => {
+    api.mockImplementation((path) => {
+      if (path === '/candidates') return Promise.resolve({ candidates: [{ id: 1, name: 'Keivia Dias' }] });
+      if (path === '/dashboard/list?type=cabos' || path === '/dashboard/list?type=subcabos') return Promise.resolve({ items: [] });
+      if (path.includes('/elections/comparativo-eleitores')) return Promise.resolve({ rows: [] });
+      return Promise.reject(new Error('unexpected path'));
     });
+
+    render(<Crossing />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
+
+    await waitFor(() => expect(screen.getByText('Nenhum registro encontrado para os filtros atuais.')).toBeInTheDocument());
   });
 });
