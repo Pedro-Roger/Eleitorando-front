@@ -25,6 +25,10 @@ const rows = [
     cabo: 'Felipe', subcabo: 'João', zona: '03', secao: '0987',
     cadastrados: 4, apurado: 5, diferenca: -1, status: 'Apurado excede em 1',
   },
+  {
+    cabo: 'Neudo', subcabo: '', zona: '04', secao: '0123',
+    cadastrados: 7, apurado: 7, diferenca: 0, status: 'OK',
+  },
 ];
 
 describe('Crossing Page', () => {
@@ -42,7 +46,15 @@ describe('Crossing Page', () => {
           { id: 13, title: 'Ana', caboId: 20 },
         ] });
       }
-      if (path.includes('/elections/comparativo-eleitores')) return Promise.resolve({ rows });
+      if (path.includes('/elections/comparativo-eleitores')) {
+        const parsed = new URL(path, 'http://localhost');
+        const filtered = parsed.searchParams.get('caboId') === '10'
+          ? rows.filter((row) => row.cabo === 'Felipe')
+          : parsed.searchParams.get('subcaboId') === '11'
+            ? rows.filter((row) => row.subcabo === 'Pedro')
+            : rows;
+        return Promise.resolve({ rows: filtered });
+      }
       if (path.includes('/elections/relatorio-faltantes')) return Promise.resolve({
         candidateName: 'Keivia Dias',
         summary: [{ cabo: 'Felipe', subcabo: 'Pedro', cadastrados: 2, secoes: 1 }],
@@ -81,8 +93,10 @@ describe('Crossing Page', () => {
 
     fireEvent.change(screen.getByLabelText('Subcabo'), { target: { value: '' } });
     fireEvent.change(screen.getByLabelText('Zona'), { target: { value: '03' } });
-    expect(within(screen.getAllByRole('table')[0]).queryByText('Pedro')).not.toBeInTheDocument();
-    expect(within(screen.getAllByRole('table')[0]).getByText('João')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(within(screen.getAllByRole('table')[0]).queryByText('Pedro')).not.toBeInTheDocument();
+      expect(within(screen.getAllByRole('table')[0]).getByText('João')).toBeInTheDocument();
+    });
   });
 
   it('mostra apenas os subcabos vinculados ao cabo selecionado', async () => {
@@ -95,6 +109,19 @@ describe('Crossing Page', () => {
     expect(within(subcaboFilter).getByRole('option', { name: 'Pedro' })).toBeInTheDocument();
     expect(within(subcaboFilter).getByRole('option', { name: 'João' })).toBeInTheDocument();
     expect(within(subcaboFilter).queryByRole('option', { name: 'Ana' })).not.toBeInTheDocument();
+  });
+
+  it('filtra somente os cadastros do cabo selecionado e envia o cabo para a API', async () => {
+    render(<Crossing />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
+    await screen.findAllByRole('columnheader', { name: 'Apurado TSE' });
+
+    fireEvent.change(screen.getByLabelText('Cabo'), { target: { value: '10' } });
+
+    await waitFor(() => expect(api).toHaveBeenCalledWith(expect.stringContaining('caboId=10')));
+    const comparisonTable = screen.getAllByRole('table')[0];
+    expect(within(comparisonTable).getAllByText('Felipe')).not.toHaveLength(0);
+    expect(within(comparisonTable).queryByText('Neudo')).not.toBeInTheDocument();
   });
 
   it('mostra mensagem vazia quando a candidata não possui linhas', async () => {

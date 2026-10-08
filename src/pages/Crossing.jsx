@@ -58,7 +58,10 @@ export default function Crossing() {
 
     setLoading(true);
     setError('');
-    const candidateQuery = `?candidateName=${encodeURIComponent(candidatoNome)}`;
+    const query = new URLSearchParams({ candidateName: candidatoNome });
+    if (caboId) query.set('caboId', caboId);
+    if (subcaboId) query.set('subcaboId', subcaboId);
+    const candidateQuery = `?${query.toString()}`;
     Promise.all([
       api(`/elections/comparativo-eleitores${candidateQuery}`),
       api(`/elections/relatorio-faltantes${candidateQuery}`),
@@ -80,11 +83,14 @@ export default function Crossing() {
       });
 
     return () => { mounted = false; };
-  }, [candidatoNome]);
+  }, [candidatoNome, caboId, subcaboId]);
 
   async function downloadReport() {
     try {
-      const query = `?candidateName=${encodeURIComponent(candidatoNome)}`;
+      const queryParams = new URLSearchParams({ candidateName: candidatoNome });
+      if (caboId) queryParams.set('caboId', caboId);
+      if (subcaboId) queryParams.set('subcaboId', subcaboId);
+      const query = `?${queryParams.toString()}`;
       await apiDownload(`/elections/relatorio-faltantes/pdf${query}`);
     } catch (downloadError) {
       setError(downloadError.message || 'Não foi possível gerar o PDF.');
