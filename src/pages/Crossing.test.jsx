@@ -58,7 +58,7 @@ describe('Crossing Page', () => {
       if (path.includes('/elections/relatorio-faltantes')) return Promise.resolve({
         candidateName: 'Keivia Dias',
         summary: [{ cabo: 'Felipe', subcabo: 'Pedro', cadastrados: 2, secoes: 1 }],
-        missing: [{ zona: '02', secao: '0533', cadastrados: 2, apurado: 3, faltantes: 1 }],
+        missing: [{ zona: '02', secao: '0533', cadastrados: 4, apurado: 3, faltantes: 1 }],
         totalCadastrados: 6,
         totalApurado: 8,
         totalFaltantes: 1,
@@ -146,6 +146,6 @@ describe('Crossing Page', () => {
     expect(await screen.findByText('Resumo por cabo e subcabo')).toBeInTheDocument();
     expect(screen.getByText('Total faltante')).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Votos faltantes' })).toBeInTheDocument();
-    expect(screen.getByText('Relatório PDF')).toBeInTheDocument();
+    expect(screen.getByText('Exportar relatório PDF')).toBeInTheDocument();
   });
 });

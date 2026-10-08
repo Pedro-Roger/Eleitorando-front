@@ -160,6 +160,11 @@ export default function Crossing() {
           </div>
         ) : (
           <>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+              <button type="button" onClick={downloadReport} style={{ padding: '10px 14px', border: 0, borderRadius: 8, background: '#0F766E', color: 'white', fontWeight: 700, cursor: 'pointer' }}>
+                Exportar relatório PDF
+              </button>
+            </div>
             <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap', background: '#F8FAFC', padding: 16, borderRadius: 8 }}>
               <div style={{ flex: '1 1 160px' }}>
                 <label htmlFor="filtro-cabo" style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Cabo</label>
@@ -228,14 +233,11 @@ export default function Crossing() {
             {report && (
               <section className="report-section" style={{ marginTop: 24 }} aria-labelledby="missing-report-title">
                 <div className="comparison-table-card" style={{ background: '#fff', borderRadius: 8, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
+                  <div style={{ marginBottom: 20 }}>
                     <div>
                       <h3 id="missing-report-title" style={{ margin: 0, color: '#0F172A' }}>Relatório de votos faltantes</h3>
-                      <p style={{ margin: '6px 0 0', color: '#64748B' }}>O excesso de cadastros não reduz a falta de outra zona.</p>
+                      <p style={{ margin: '6px 0 0', color: '#64748B' }}>Entram aqui somente as diferenças positivas entre cadastrados e apurado TSE.</p>
                     </div>
-                    <button type="button" onClick={downloadReport} style={{ padding: '10px 14px', border: 0, borderRadius: 8, background: '#0F766E', color: 'white', fontWeight: 700, cursor: 'pointer' }}>
-                      Relatório PDF
-                    </button>
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 24 }}>
