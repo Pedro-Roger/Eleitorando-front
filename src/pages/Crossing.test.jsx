@@ -19,11 +19,11 @@ vi.mock('../lib/api', () => ({
 const rows = [
   {
     cabo: 'Felipe', subcabo: 'Pedro', zona: '02', secao: '0533',
-    cadastrados: 2, apurado: 3, diferenca: -1, status: 'Apurado excede em 1',
+    cadastrados: 2, apurado: 3, diferenca: -1, status: 'OK',
   },
   {
     cabo: 'Felipe', subcabo: 'João', zona: '03', secao: '0987',
-    cadastrados: 4, apurado: 5, diferenca: -1, status: 'Apurado excede em 1',
+    cadastrados: 4, apurado: 5, diferenca: -1, status: 'OK',
   },
   {
     cabo: 'Neudo', subcabo: '', zona: '04', secao: '0123',
