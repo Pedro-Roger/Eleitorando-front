@@ -15,8 +15,10 @@ export default function Crossing() {
   const [filtroZona, setFiltroZona] = useState('');
   const [filtroSecao, setFiltroSecao] = useState('');
   const [apenasComColeta, setApenasComColeta] = useState(true);
+  const [viewMode, setViewMode] = useState('lista');
 
   const [rawSections, setRawSections] = useState([]);
+  const [votersReport, setVotersReport] = useState([]);
   const [totais, setTotais] = useState({ tse: 0, coletado: 0 });
   const [loading, setLoading] = useState(false);
   const me = getUser();
@@ -33,13 +35,27 @@ export default function Crossing() {
   }, [me]);
 
   useEffect(() => {
+    let isMounted = true;
+    
+    if (viewMode === 'lista') {
+      setLoading(true);
+      api('/elections/relatorio-eleitores').then(res => {
+        if (!isMounted) return;
+        setVotersReport(res.items || []);
+        setLoading(false);
+      }).catch(err => {
+        console.error(err);
+        if (isMounted) setLoading(false);
+      });
+      return () => { isMounted = false; };
+    }
+
     if (!candidatoNome) {
       setRawSections([]);
       setTotais({ tse: 0, coletado: 0 });
       return;
     }
     
-    let isMounted = true;
     setLoading(true);
 
     let url = `/elections/comparativo-zona?candidateName=${encodeURIComponent(candidatoNome)}&limit=9999`;
@@ -59,9 +75,10 @@ export default function Crossing() {
       });
       
     return () => { isMounted = false; };
-  }, [candidatoNome, caboId, subcaboId]);
+  }, [candidatoNome, caboId, subcaboId, viewMode]);
 
   const { data, overflow } = useMemo(() => {
+    if (viewMode !== 'secao') return { data: {}, overflow: false };
     let filtered = rawSections;
     if (filtroZona) filtered = filtered.filter(s => String(s.zona).includes(filtroZona));
     if (filtroSecao) filtered = filtered.filter(s => String(s.secao).includes(filtroSecao));
@@ -86,35 +103,42 @@ export default function Crossing() {
       byCity[city].sort((a, b) => Number(a.zona) - Number(b.zona) || Number(a.secao) - Number(b.secao));
     }
     return { data: byCity, overflow };
-  }, [rawSections, filtroZona, filtroSecao, apenasComColeta]);
+  }, [rawSections, filtroZona, filtroSecao, apenasComColeta, viewMode]);
+
+  const filteredVoters = useMemo(() => {
+    if (viewMode !== 'lista') return [];
+    let list = votersReport;
+    if (caboId) {
+      const cTitle = cabos.find(c => String(c.id) === String(caboId))?.title || '';
+      list = list.filter(v => v.caboFinalName === cTitle);
+    }
+    if (subcaboId) {
+      const sTitle = subcabos.find(s => String(s.id) === String(subcaboId))?.title || '';
+      list = list.filter(v => v.subcaboName === sTitle);
+    }
+    if (filtroZona) list = list.filter(v => String(v.zone).includes(filtroZona));
+    if (filtroSecao) list = list.filter(v => String(v.section).includes(filtroSecao));
+    
+    return list;
+  }, [votersReport, caboId, subcaboId, filtroZona, filtroSecao, cabos, subcabos, viewMode]);
 
   return (
     <>
       <AppHeader title="Inteligência Eleitoral" subtitle="Auditoria de Urnas" />
       <div className="page" style={{ paddingBottom: 104 }}>
         
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16, overflowX: 'auto', paddingBottom: 8 }}>
-          {candidatos.map(c => (
-            <button 
-              key={c.id} 
-              onClick={() => setCandidatoNome(c.name)}
-              style={{ 
-                flex: '0 0 auto', 
-                padding: '12px 24px', 
-                background: candidatoNome === c.name ? '#2563EB' : '#E2E8F0',
-                color: candidatoNome === c.name ? 'white' : '#1E293B',
-                borderRadius: 8,
-                border: 'none',
-                fontWeight: 'bold',
-                cursor: 'pointer'
-              }}
-            >
-              {c.name}
-            </button>
-          ))}
+        <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
+          <button 
+            onClick={() => setViewMode('secao')}
+            style={{ padding: '8px 16px', background: viewMode === 'secao' ? '#0F172A' : '#E2E8F0', color: viewMode === 'secao' ? 'white' : 'black', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 'bold' }}
+          >Visão por Seção</button>
+          <button 
+            onClick={() => setViewMode('lista')}
+            style={{ padding: '8px 16px', background: viewMode === 'lista' ? '#0F172A' : '#E2E8F0', color: viewMode === 'lista' ? 'white' : 'black', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 'bold' }}
+          >Relatório de Eleitores</button>
         </div>
 
-        {candidatoNome && me?.role === 'ADMIN' && (
+        {me?.role === 'ADMIN' && (
           <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
             <div style={{ flex: '1 1 200px' }}>
               <label style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Cabo Eleitoral</label>
@@ -141,118 +165,178 @@ export default function Crossing() {
           </div>
         )}
 
-        {candidatoNome && (
-          <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
-            <div style={{ flex: '1 1 80px' }}>
-              <label style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Zona</label>
-              <input 
-                type="text"
-                placeholder="Ex: 120"
-                value={filtroZona} 
-                onChange={e => setFiltroZona(e.target.value)} 
-                style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #CBD5E1' }}
-              />
-            </div>
-            <div style={{ flex: '1 1 80px' }}>
-              <label style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Seção</label>
-              <input 
-                type="text"
-                placeholder="Ex: 410"
-                value={filtroSecao} 
-                onChange={e => setFiltroSecao(e.target.value)} 
-                style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #CBD5E1' }}
-              />
-            </div>
+        <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 80px' }}>
+            <label style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Zona</label>
+            <input 
+              type="text"
+              placeholder="Ex: 120"
+              value={filtroZona} 
+              onChange={e => setFiltroZona(e.target.value)} 
+              style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #CBD5E1' }}
+            />
           </div>
-        )}
+          <div style={{ flex: '1 1 80px' }}>
+            <label style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Seção</label>
+            <input 
+              type="text"
+              placeholder="Ex: 410"
+              value={filtroSecao} 
+              onChange={e => setFiltroSecao(e.target.value)} 
+              style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #CBD5E1' }}
+            />
+          </div>
+        </div>
 
-        {candidatoNome && (
-          <div style={{ width: '100%', marginBottom: 16 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, color: '#475569' }}>
-              <input type="checkbox" checked={apenasComColeta} onChange={e => setApenasComColeta(e.target.checked)} />
-              Mostrar apenas seções com eleitores cadastrados
-            </label>
-          </div>
-        )}
-
-        {candidatoNome && rawSections.length > 0 && (
-          <div style={{ background: '#0F172A', color: 'white', padding: 20, borderRadius: 8, marginBottom: 24, display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
-            <div style={{ textAlign: 'center' }}>
-              <span style={{ display: 'block', fontSize: 14, color: '#94A3B8', marginBottom: 4 }}>Total Sistema (Eleitorando)</span>
-              <strong style={{ fontSize: 28, color: '#10B981' }}>{totais.coletado}</strong>
+        {viewMode === 'secao' && (
+          <>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16, overflowX: 'auto', paddingBottom: 8 }}>
+              {candidatos.map(c => (
+                <button 
+                  key={c.id} 
+                  onClick={() => setCandidatoNome(c.name)}
+                  style={{ 
+                    flex: '0 0 auto', 
+                    padding: '12px 24px', 
+                    background: candidatoNome === c.name ? '#2563EB' : '#E2E8F0',
+                    color: candidatoNome === c.name ? 'white' : '#1E293B',
+                    borderRadius: 8,
+                    border: 'none',
+                    fontWeight: 'bold',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {c.name}
+                </button>
+              ))}
             </div>
-            <div style={{ width: 1, height: 40, background: '#334155' }}></div>
-            <div style={{ textAlign: 'center' }}>
-              <span style={{ display: 'block', fontSize: 14, color: '#94A3B8', marginBottom: 4 }}>Total Oficial (TSE)</span>
-              <strong style={{ fontSize: 28, color: '#38BDF8' }}>{totais.tse}</strong>
-            </div>
-          </div>
-        )}
 
-        {candidatoNome && (
-          <h2 className="panel-title" style={{ marginBottom: 16 }}>Comparativo de Votos por Cidade e Zona</h2>
-        )}
-        
-        {overflow && (
-          <div style={{ padding: 12, background: '#FEF3C7', color: '#B45309', borderRadius: 8, marginBottom: 16, fontWeight: 'bold' }}>
-            Mostrando as 200 primeiras seções. Use os filtros de Zona, Seção ou Cabo para achar o que precisa.
-          </div>
-        )}
-
-        {!candidatoNome ? (
-          <div className="empty" style={{ textAlign: 'center', marginTop: 32 }}>
-            Selecione uma candidata acima.
-          </div>
-        ) : loading ? (
-          <div className="empty" style={{ textAlign: 'center', marginTop: 32 }}>
-            Carregando dados...
-          </div>
-        ) : Object.keys(data).length === 0 ? (
-          <div className="empty" style={{ textAlign: 'center', marginTop: 32 }}>
-            Nenhum dado encontrado para os filtros atuais.
-          </div>
-        ) : (
-          Object.keys(data).sort().map(cidade => (
-            <div key={cidade} style={{ marginBottom: 24, background: '#fff', borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-              <div style={{ background: '#F8FAFC', padding: '12px 16px', borderBottom: '1px solid #E2E8F0' }}>
-                <h3 style={{ margin: 0, fontSize: 18, color: '#0F172A' }}>{cidade}</h3>
+            {candidatoNome && (
+              <div style={{ width: '100%', marginBottom: 16 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, color: '#475569' }}>
+                  <input type="checkbox" checked={apenasComColeta} onChange={e => setApenasComColeta(e.target.checked)} />
+                  Mostrar apenas seções com eleitores cadastrados
+                </label>
               </div>
-              
-              <div style={{ padding: 16 }}>
-                {data[cidade].map(item => {
-                  const key = `${item.zona}-${item.secao}`;
-                  const divergencia = item.coletado > item.tse;
-                  const color = divergencia ? '#E11D48' : '#10B981';
+            )}
+
+            {candidatoNome && rawSections.length > 0 && (
+              <div style={{ background: '#0F172A', color: 'white', padding: 20, borderRadius: 8, marginBottom: 24, display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <span style={{ display: 'block', fontSize: 14, color: '#94A3B8', marginBottom: 4 }}>Total Sistema (Eleitorando)</span>
+                  <strong style={{ fontSize: 28, color: '#10B981' }}>{totais.coletado}</strong>
+                </div>
+                <div style={{ width: 1, height: 40, background: '#334155' }}></div>
+                <div style={{ textAlign: 'center' }}>
+                  <span style={{ display: 'block', fontSize: 14, color: '#94A3B8', marginBottom: 4 }}>Total Oficial (TSE)</span>
+                  <strong style={{ fontSize: 28, color: '#38BDF8' }}>{totais.tse}</strong>
+                </div>
+              </div>
+            )}
+
+            {overflow && (
+              <div style={{ padding: 12, background: '#FEF3C7', color: '#B45309', borderRadius: 8, marginBottom: 16, fontWeight: 'bold' }}>
+                Mostrando as 200 primeiras seções. Use os filtros de Zona, Seção ou Cabo para achar o que precisa.
+              </div>
+            )}
+
+            {!candidatoNome ? (
+              <div className="empty" style={{ textAlign: 'center', marginTop: 32 }}>
+                Selecione uma candidata acima.
+              </div>
+            ) : loading ? (
+              <div className="empty" style={{ textAlign: 'center', marginTop: 32 }}>
+                Carregando dados...
+              </div>
+            ) : Object.keys(data).length === 0 ? (
+              <div className="empty" style={{ textAlign: 'center', marginTop: 32 }}>
+                Nenhum dado encontrado para os filtros atuais.
+              </div>
+            ) : (
+              Object.keys(data).sort().map(cidade => (
+                <div key={cidade} style={{ marginBottom: 24, background: '#fff', borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                  <div style={{ background: '#F8FAFC', padding: '12px 16px', borderBottom: '1px solid #E2E8F0' }}>
+                    <h3 style={{ margin: 0, fontSize: 18, color: '#0F172A' }}>{cidade}</h3>
+                  </div>
                   
-                  return (
-                    <div key={key} style={{ marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid #F1F5F9', borderLeft: `4px solid ${color}`, paddingLeft: 12 }}>
-                      <h4 style={{ margin: '0 0 8px 0', fontSize: 16 }}>Zona {item.zona} — Seção {item.secao}</h4>
-                      <div style={{ display: 'flex', gap: 32, fontSize: 14 }}>
-                        <div>
-                          <span style={{ color: '#64748B', display: 'block', fontSize: 12 }}>Sistema (Eleitorando)</span>
-                          <strong style={{ fontSize: 18, color: divergencia ? '#E11D48' : '#0F172A' }}>{item.coletado}</strong>
-                        </div>
-                        <div>
-                          <span style={{ color: '#64748B', display: 'block', fontSize: 12 }}>Oficial (TSE)</span>
-                          <strong style={{ fontSize: 18, color: '#0F172A' }}>{item.tse}</strong>
-                        </div>
-                        {divergencia && (
-                          <div style={{ display: 'flex', alignItems: 'center', color: '#E11D48', fontWeight: 'bold' }}>
-                            ⚠️ Falta(m) {item.coletado - item.tse} voto(s)
+                  <div style={{ padding: 16 }}>
+                    {data[cidade].map(item => {
+                      const key = `${item.zona}-${item.secao}`;
+                      const divergencia = item.coletado > item.tse;
+                      const color = divergencia ? '#E11D48' : '#10B981';
+                      
+                      return (
+                        <div key={key} style={{ marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid #F1F5F9', borderLeft: `4px solid ${color}`, paddingLeft: 12 }}>
+                          <h4 style={{ margin: '0 0 8px 0', fontSize: 16 }}>Zona {item.zona} — Seção {item.secao}</h4>
+                          <div style={{ display: 'flex', gap: 32, fontSize: 14 }}>
+                            <div>
+                              <span style={{ color: '#64748B', display: 'block', fontSize: 12 }}>Sistema (Eleitorando)</span>
+                              <strong style={{ fontSize: 18, color: divergencia ? '#E11D48' : '#0F172A' }}>{item.coletado}</strong>
+                            </div>
+                            <div>
+                              <span style={{ color: '#64748B', display: 'block', fontSize: 12 }}>Oficial (TSE)</span>
+                              <strong style={{ fontSize: 18, color: '#0F172A' }}>{item.tse}</strong>
+                            </div>
+                            {divergencia && (
+                              <div style={{ display: 'flex', alignItems: 'center', color: '#E11D48', fontWeight: 'bold' }}>
+                                ⚠️ Falta(m) {item.coletado - item.tse} voto(s)
+                              </div>
+                            )}
+                            {!divergencia && (
+                              <div style={{ display: 'flex', alignItems: 'center', color: '#10B981', fontWeight: 'bold' }}>
+                                ✓ OK
+                              </div>
+                            )}
                           </div>
-                        )}
-                        {!divergencia && (
-                          <div style={{ display: 'flex', alignItems: 'center', color: '#10B981', fontWeight: 'bold' }}>
-                            ✓ OK
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))
+            )}
+          </>
+        )}
+
+        {viewMode === 'lista' && (
+          <div style={{ background: '#fff', borderRadius: 8, padding: 16, overflowX: 'auto', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+            <h2 style={{marginTop: 0, fontSize: 18, color: '#0F172A'}}>Relatório de Eleitores Cadastrados</h2>
+            
+            {loading ? (
+              <div style={{ padding: 20, textAlign: 'center' }}>Carregando...</div>
+            ) : filteredVoters.length === 0 ? (
+              <div style={{ padding: 20, textAlign: 'center', color: '#64748B' }}>
+                Nenhum eleitor cadastrado com Zona e Seção preenchidas.
               </div>
-            </div>
-          ))
+            ) : (
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                <thead>
+                  <tr style={{ background: '#F8FAFC', textAlign: 'left' }}>
+                    <th style={{ padding: '12px 8px', borderBottom: '2px solid #E2E8F0', color: '#475569' }}>Eleitor</th>
+                    <th style={{ padding: '12px 8px', borderBottom: '2px solid #E2E8F0', color: '#475569' }}>Cabo/Subcabo</th>
+                    <th style={{ padding: '12px 8px', borderBottom: '2px solid #E2E8F0', color: '#475569' }}>Cidade</th>
+                    <th style={{ padding: '12px 8px', borderBottom: '2px solid #E2E8F0', color: '#475569' }}>Zona / Seção</th>
+                    <th style={{ padding: '12px 8px', borderBottom: '2px solid #E2E8F0', color: '#475569' }}>Cadastros na Seção</th>
+                    <th style={{ padding: '12px 8px', borderBottom: '2px solid #E2E8F0', color: '#10B981' }}>Keivia TSE</th>
+                    <th style={{ padding: '12px 8px', borderBottom: '2px solid #E2E8F0', color: '#38BDF8' }}>Erika TSE</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredVoters.map(v => (
+                    <tr key={v.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                      <td style={{ padding: '12px 8px', fontWeight: '500' }}>{v.name}</td>
+                      <td style={{ padding: '12px 8px' }}>{v.subcaboName || v.caboFinalName || v.creatorName}</td>
+                      <td style={{ padding: '12px 8px' }}>{v.city || '-'}</td>
+                      <td style={{ padding: '12px 8px' }}>{v.zone} / {v.section}</td>
+                      <td style={{ padding: '12px 8px', fontWeight: 'bold' }}>{v.cadastrosSecao}</td>
+                      <td style={{ padding: '12px 8px', color: '#10B981', fontWeight: 'bold' }}>{v.tseKeivia}</td>
+                      <td style={{ padding: '12px 8px', color: '#38BDF8', fontWeight: 'bold' }}>{v.tseErika}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         )}
       </div>
     </>
