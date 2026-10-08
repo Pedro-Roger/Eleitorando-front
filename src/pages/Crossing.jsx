@@ -1,6 +1,8 @@
-import { useEffect, useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import AppHeader from '../components/AppHeader';
-import { api, getUser } from '../lib/api';
+import { api } from '../services/api';
+import { getUser } from '../services/auth';
+import './Panel.css';
 
 export default function Crossing() {
   const [candidatos, setCandidatos] = useState([]);
@@ -33,38 +35,43 @@ export default function Crossing() {
   useEffect(() => {
     if (!candidatoNome) {
       setRawSections([]);
+      setTotais({ tse: 0, coletado: 0 });
       return;
     }
     
     let isMounted = true;
     setLoading(true);
-    
+
     let url = `/elections/comparativo-zona?candidateName=${encodeURIComponent(candidatoNome)}&limit=9999`;
     if (caboId) url += `&caboId=${caboId}`;
     if (subcaboId) url += `&subcaboId=${subcaboId}`;
-    
+
     api(url)
-      .then((res) => {
-        if (isMounted) {
-          setRawSections(res.sections || []);
-          setTotais({ tse: res.totalTseVotes || 0, coletado: res.totalCollectedVoters || 0 });
-        }
+      .then(res => {
+        if (!isMounted) return;
+        setRawSections(res.sections || []);
+        setTotais({ tse: res.totalTseVotes || 0, coletado: res.totalCollectedVoters || 0 });
+        setLoading(false);
       })
-      .catch(() => {
-        if (isMounted) { setRawSections([]); setTotais({ tse: 0, coletado: 0 }); }
-      })
-      .finally(() => {
+      .catch(err => {
+        console.error(err);
         if (isMounted) setLoading(false);
       });
       
     return () => { isMounted = false; };
   }, [candidatoNome, caboId, subcaboId]);
 
-  const data = useMemo(() => {
+  const { data, overflow } = useMemo(() => {
     let filtered = rawSections;
     if (filtroZona) filtered = filtered.filter(s => String(s.zona).includes(filtroZona));
     if (filtroSecao) filtered = filtered.filter(s => String(s.secao).includes(filtroSecao));
     if (apenasComColeta) filtered = filtered.filter(s => Number(s.coletado) > 0);
+
+    let overflow = false;
+    if (filtered.length > 200) {
+      filtered = filtered.slice(0, 200);
+      overflow = true;
+    }
 
     const byCity = {};
     filtered.forEach(item => {
@@ -75,11 +82,10 @@ export default function Crossing() {
       byCity[cityName].push(item);
     });
     
-    // Sort sections within each city
     for (const city of Object.keys(byCity)) {
       byCity[city].sort((a, b) => Number(a.zona) - Number(b.zona) || Number(a.secao) - Number(b.secao));
     }
-    return byCity;
+    return { data: byCity, overflow };
   }, [rawSections, filtroZona, filtroSecao, apenasComColeta]);
 
   return (
@@ -108,35 +114,40 @@ export default function Crossing() {
           ))}
         </div>
 
-        {candidatoNome && (
-          <div style={{ background: '#F8FAFC', padding: 16, borderRadius: 8, marginBottom: 24, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-            <div style={{ flex: '1 1 120px' }}>
+        {candidatoNome && me?.role === 'ADMIN' && (
+          <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 200px' }}>
               <label style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Cabo Eleitoral</label>
               <select 
                 value={caboId} 
                 onChange={e => { setCaboId(e.target.value); setSubcaboId(''); }} 
-                style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #CBD5E1' }}
+                style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #CBD5E1', background: 'white' }}
               >
                 <option value="">Todos</option>
                 {cabos.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
               </select>
             </div>
-            <div style={{ flex: '1 1 120px' }}>
+            <div style={{ flex: '1 1 200px' }}>
               <label style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Subcabo</label>
               <select 
                 value={subcaboId} 
                 onChange={e => { setSubcaboId(e.target.value); setCaboId(''); }} 
-                style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #CBD5E1' }}
+                style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #CBD5E1', background: 'white' }}
               >
                 <option value="">Todos</option>
                 {subcabos.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
               </select>
             </div>
+          </div>
+        )}
+
+        {candidatoNome && (
+          <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
             <div style={{ flex: '1 1 80px' }}>
               <label style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Zona</label>
               <input 
                 type="text"
-                placeholder="Ex: 119"
+                placeholder="Ex: 120"
                 value={filtroZona} 
                 onChange={e => setFiltroZona(e.target.value)} 
                 style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #CBD5E1' }}
@@ -153,15 +164,17 @@ export default function Crossing() {
               />
             </div>
           </div>
-            <div style={{ width: '100%', marginTop: 8 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, color: '#475569' }}>
-                <input type="checkbox" checked={apenasComColeta} onChange={e => setApenasComColeta(e.target.checked)} />
-                Mostrar apenas seções com eleitores cadastrados
-              </label>
-            </div>
         )}
 
-        
+        {candidatoNome && (
+          <div style={{ width: '100%', marginBottom: 16 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, color: '#475569' }}>
+              <input type="checkbox" checked={apenasComColeta} onChange={e => setApenasComColeta(e.target.checked)} />
+              Mostrar apenas seções com eleitores cadastrados
+            </label>
+          </div>
+        )}
+
         {candidatoNome && rawSections.length > 0 && (
           <div style={{ background: '#0F172A', color: 'white', padding: 20, borderRadius: 8, marginBottom: 24, display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
             <div style={{ textAlign: 'center' }}>
@@ -180,6 +193,12 @@ export default function Crossing() {
           <h2 className="panel-title" style={{ marginBottom: 16 }}>Comparativo de Votos por Cidade e Zona</h2>
         )}
         
+        {overflow && (
+          <div style={{ padding: 12, background: '#FEF3C7', color: '#B45309', borderRadius: 8, marginBottom: 16, fontWeight: 'bold' }}>
+            Mostrando as 200 primeiras seções. Use os filtros de Zona, Seção ou Cabo para achar o que precisa.
+          </div>
+        )}
+
         {!candidatoNome ? (
           <div className="empty" style={{ textAlign: 'center', marginTop: 32 }}>
             Selecione uma candidata acima.
@@ -202,7 +221,6 @@ export default function Crossing() {
               <div style={{ padding: 16 }}>
                 {data[cidade].map(item => {
                   const key = `${item.zona}-${item.secao}`;
-                  // Divergência só se faltaram votos no TSE (coletado > tse)
                   const divergencia = item.coletado > item.tse;
                   const color = divergencia ? '#E11D48' : '#10B981';
                   
