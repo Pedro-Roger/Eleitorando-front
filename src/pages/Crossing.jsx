@@ -207,9 +207,17 @@ export default function Crossing() {
         ) : (
           <>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-              <button type="button" onClick={downloadReport} style={{ padding: '10px 14px', border: 0, borderRadius: 8, background: '#0F766E', color: 'white', fontWeight: 700, cursor: 'pointer' }}>
-                Exportar relatório PDF
-              </button>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                <button type="button" onClick={downloadReport} style={{ padding: '10px 14px', border: 0, borderRadius: 8, background: '#0F766E', color: 'white', fontWeight: 700, cursor: 'pointer' }}>
+                  Exportar relatório PDF
+                </button>
+                <button type="button" onClick={() => apiDownload(`/elections/inteligencia-eleitoral/eleitores/pdf${reportQuery()}`).catch((e) => setError(e.message || 'Não foi possível gerar o PDF detalhado.'))} style={{ padding: '10px 14px', border: 0, borderRadius: 8, background: '#2563EB', color: 'white', fontWeight: 700, cursor: 'pointer' }}>
+                  PDF eleitores detalhado
+                </button>
+                <button type="button" onClick={() => apiDownload(`/elections/inteligencia-eleitoral/cabos/pdf${reportQuery()}`).catch((e) => setError(e.message || 'Não foi possível gerar o ranking de cabos.'))} style={{ padding: '10px 14px', border: 0, borderRadius: 8, background: '#7C3AED', color: 'white', fontWeight: 700, cursor: 'pointer' }}>
+                  PDF ranking de cabos
+                </button>
+              </div>
             </div>
             <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap', background: '#F8FAFC', padding: 16, borderRadius: 8 }}>
               <div style={{ flex: '1 1 160px' }}>
