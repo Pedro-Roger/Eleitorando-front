@@ -2,7 +2,7 @@ import { render, screen, waitFor, fireEvent, within } from '@testing-library/rea
 import '@testing-library/jest-dom';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 import Crossing from './Crossing';
-import { api } from '../lib/api';
+import { api, apiDownload } from '../lib/api';
 
 const adminUser = vi.hoisted(() => ({ role: 'ADMIN' }));
 
@@ -12,21 +12,21 @@ vi.mock('../components/AppHeader', () => ({
 
 vi.mock('../lib/api', () => ({
   api: vi.fn(),
-  apiDownload: vi.fn(),
+  apiDownload: vi.fn(() => Promise.resolve()),
   getUser: vi.fn(() => adminUser),
 }));
 
 const rows = [
   {
-    cabo: 'Felipe', subcabo: 'Pedro', zona: '02', secao: '0533',
+    city: 'FORTALEZA', cabo: 'Felipe', subcabo: 'Pedro', zona: '02', secao: '0533',
     cadastrados: 2, apurado: 3, diferenca: -1, status: 'OK',
   },
   {
-    cabo: 'Felipe', subcabo: 'João', zona: '03', secao: '0987',
+    city: 'FORTALEZA', cabo: 'Felipe', subcabo: 'João', zona: '03', secao: '0987',
     cadastrados: 4, apurado: 5, diferenca: -1, status: 'OK',
   },
   {
-    cabo: 'Neudo', subcabo: '', zona: '04', secao: '0123',
+    city: 'SOBRAL', cabo: 'Neudo', subcabo: '', zona: '04', secao: '0123',
     cadastrados: 7, apurado: 7, diferenca: 0, status: 'OK',
   },
 ];
@@ -109,6 +109,23 @@ describe('Crossing Page', () => {
     expect(within(subcaboFilter).getByRole('option', { name: 'Pedro' })).toBeInTheDocument();
     expect(within(subcaboFilter).getByRole('option', { name: 'João' })).toBeInTheDocument();
     expect(within(subcaboFilter).queryByRole('option', { name: 'Ana' })).not.toBeInTheDocument();
+  });
+
+  it('filtra por cidade e envia cidade, zona e seção aos PDFs', async () => {
+    render(<Crossing />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
+    await screen.findAllByRole('columnheader', { name: 'Apurado TSE' });
+
+    fireEvent.change(screen.getByLabelText('Cidade'), { target: { value: 'Fortaleza' } });
+    fireEvent.change(screen.getByLabelText('Zona'), { target: { value: '02' } });
+    fireEvent.change(screen.getByLabelText('Seção'), { target: { value: '0533' } });
+    expect(within(screen.getAllByRole('table')[0]).getByText('FORTALEZA')).toBeInTheDocument();
+    expect(within(screen.getAllByRole('table')[0]).queryByText('SOBRAL')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'PDF eleitores detalhado' }));
+    expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('city=Fortaleza'));
+    expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('zone=02'));
+    expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('section=0533'));
   });
 
   it('filtra somente os cadastros do cabo selecionado e envia o cabo para a API', async () => {

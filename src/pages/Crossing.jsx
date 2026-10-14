@@ -30,6 +30,7 @@ export default function Crossing() {
   const [subcabos, setSubcabos] = useState([]);
   const [caboId, setCaboId] = useState('');
   const [subcaboId, setSubcaboId] = useState('');
+  const [filtroCidade, setFiltroCidade] = useState('');
   const [filtroZona, setFiltroZona] = useState('');
   const [filtroSecao, setFiltroSecao] = useState('');
   const [rows, setRows] = useState([]);
@@ -99,11 +100,7 @@ export default function Crossing() {
 
   async function downloadReport() {
     try {
-      const queryParams = new URLSearchParams({ candidateName: candidatoNome });
-      if (caboId) queryParams.set('caboId', caboId);
-      if (subcaboId) queryParams.set('subcaboId', subcaboId);
-      const query = `?${queryParams.toString()}`;
-      await apiDownload(`/elections/relatorio-faltantes/pdf${query}`);
+      await apiDownload(`/elections/relatorio-faltantes/pdf${reportQuery()}`);
     } catch (downloadError) {
       setError(downloadError.message || 'Não foi possível gerar o PDF.');
     }
@@ -113,6 +110,9 @@ export default function Crossing() {
     const queryParams = new URLSearchParams({ candidateName: candidatoNome });
     if (caboId) queryParams.set('caboId', caboId);
     if (subcaboId) queryParams.set('subcaboId', subcaboId);
+    if (filtroCidade.trim()) queryParams.set('city', filtroCidade.trim());
+    if (filtroZona.trim()) queryParams.set('zone', filtroZona.trim());
+    if (filtroSecao.trim()) queryParams.set('section', filtroSecao.trim());
     return `?${queryParams.toString()}`;
   }
 
@@ -148,10 +148,11 @@ export default function Crossing() {
     return rows.filter((row) => (
       (!caboName || row.cabo === caboName)
       && (!subcaboName || row.subcabo === subcaboName)
+      && (!filtroCidade || String(row.city || '').toLocaleUpperCase('pt-BR').includes(filtroCidade.toLocaleUpperCase('pt-BR')))
       && (!filtroZona || String(row.zona).includes(filtroZona))
       && (!filtroSecao || String(row.secao).includes(filtroSecao))
     ));
-  }, [rows, cabos, subcabos, caboId, subcaboId, filtroZona, filtroSecao]);
+  }, [rows, cabos, subcabos, caboId, subcaboId, filtroCidade, filtroZona, filtroSecao]);
 
   const visibleSubcabos = useMemo(() => (
     caboId
@@ -234,6 +235,10 @@ export default function Crossing() {
                   {visibleSubcabos.map((subcabo) => <option key={subcabo.id} value={subcabo.id}>{subcabo.title}</option>)}
                 </select>
               </div>
+              <div style={{ flex: '1 1 160px' }}>
+                <label htmlFor="filtro-cidade" style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Cidade</label>
+                <input id="filtro-cidade" aria-label="Cidade" type="text" placeholder="Ex: Fortaleza" value={filtroCidade} onChange={(event) => setFiltroCidade(event.target.value)} style={inputStyle} />
+              </div>
               <div style={{ flex: '1 1 120px' }}>
                 <label htmlFor="filtro-zona" style={{ display: 'block', fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#475569' }}>Zona</label>
                 <input id="filtro-zona" aria-label="Zona" type="text" placeholder="Ex: 120" value={filtroZona} onChange={(event) => setFiltroZona(event.target.value)} style={inputStyle} />
@@ -264,7 +269,7 @@ export default function Crossing() {
                 <table className="comparison-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                   <thead>
                     <tr style={{ background: '#F8FAFC', textAlign: 'left' }}>
-                      {['Cabo', 'Subcabo', 'Zona', 'Seção', 'Votos cadastrados', 'Apurado TSE', 'Status'].map((heading) => (
+                      {['Cabo', 'Subcabo', 'Cidade', 'Zona', 'Seção', 'Votos cadastrados', 'Apurado TSE', 'Status'].map((heading) => (
                         <th key={heading} scope="col" style={{ padding: '12px 8px', borderBottom: '2px solid #E2E8F0', color: '#475569', whiteSpace: 'nowrap' }}>{heading}</th>
                       ))}
                     </tr>
@@ -274,6 +279,7 @@ export default function Crossing() {
                       <tr key={`${row.cabo}-${row.subcabo}-${row.zona}-${row.secao}`} style={{ borderBottom: '1px solid #F1F5F9' }}>
                         <td style={{ padding: '12px 8px', fontWeight: 600 }}>{row.cabo || '—'}</td>
                         <td style={{ padding: '12px 8px' }}>{row.subcabo || '—'}</td>
+                        <td style={{ padding: '12px 8px' }}>{row.city || '—'}</td>
                         <td style={{ padding: '12px 8px', fontWeight: 600 }}>{row.zona}</td>
                         <td style={{ padding: '12px 8px', fontWeight: 600 }}>{row.secao}</td>
                         <td style={{ padding: '12px 8px', fontWeight: 700 }}>{row.cadastrados}</td>
