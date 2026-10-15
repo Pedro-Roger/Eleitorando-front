@@ -57,10 +57,10 @@ describe('Crossing Page', () => {
       }
       if (path.includes('/elections/relatorio-faltantes')) return Promise.resolve({
         candidateName: 'Keivia Dias',
-        summary: [{ cabo: 'Felipe', subcabo: 'Pedro', cadastrados: 2, secoes: 1 }],
-        missing: [{ zona: '02', secao: '0533', cadastrados: 4, apurado: 3, faltantes: 1 }],
+        summary: [{ cabo: 'Felipe', subcabo: 'Pedro', cadastrados: 2, secoes: 1, secoesComFaltantes: 1 }],
+        missing: [{ city: 'FORTALEZA', zona: '02', secao: '0533', cadastrados: 4, apurado: 3, faltantes: 1, teams: [{ cabo: 'Felipe', subcabo: 'Pedro' }] }],
         totalCadastrados: 6,
-        totalApurado: 8,
+        totalApurado: 12,
         totalFaltantes: 1,
       });
       return Promise.reject(new Error(`unexpected path: ${path}`));
@@ -88,12 +88,14 @@ describe('Crossing Page', () => {
     await screen.findAllByRole('columnheader', { name: 'Apurado TSE' });
 
     fireEvent.change(screen.getByLabelText('Subcabo'), { target: { value: '11' } });
+    await waitFor(() => expect(screen.getAllByRole('table').length).toBeGreaterThan(0));
     expect(within(screen.getAllByRole('table')[0]).getByText('Pedro')).toBeInTheDocument();
     expect(within(screen.getAllByRole('table')[0]).queryByText('João')).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Subcabo'), { target: { value: '' } });
     fireEvent.change(screen.getByLabelText('Zona'), { target: { value: '03' } });
     await waitFor(() => {
+      expect(screen.getAllByRole('table').length).toBeGreaterThan(0);
       expect(within(screen.getAllByRole('table')[0]).queryByText('Pedro')).not.toBeInTheDocument();
       expect(within(screen.getAllByRole('table')[0]).getByText('João')).toBeInTheDocument();
     });
@@ -119,6 +121,7 @@ describe('Crossing Page', () => {
     fireEvent.change(screen.getByLabelText('Cidade'), { target: { value: 'Fortaleza' } });
     fireEvent.change(screen.getByLabelText('Zona'), { target: { value: '02' } });
     fireEvent.change(screen.getByLabelText('Seção'), { target: { value: '0533' } });
+    await waitFor(() => expect(screen.getAllByRole('table').length).toBeGreaterThan(0));
     expect(within(screen.getAllByRole('table')[0]).getByText('FORTALEZA')).toBeInTheDocument();
     expect(within(screen.getAllByRole('table')[0]).queryByText('SOBRAL')).not.toBeInTheDocument();
 
@@ -128,6 +131,22 @@ describe('Crossing Page', () => {
     expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('section=0533'));
   });
 
+  it('aplica todos os filtros também ao resumo e informa o total oficial apurado', async () => {
+    render(<Crossing />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
+    await screen.findAllByRole('columnheader', { name: 'Apurado TSE' });
+
+    fireEvent.change(screen.getByLabelText('Cidade'), { target: { value: 'Fortaleza' } });
+    fireEvent.change(screen.getByLabelText('Zona'), { target: { value: '02' } });
+    fireEvent.change(screen.getByLabelText('Seção'), { target: { value: '0533' } });
+
+    await waitFor(() => {
+      expect(api).toHaveBeenCalledWith(expect.stringMatching(/\/elections\/relatorio-faltantes\?.*city=Fortaleza.*zone=02.*section=0533/));
+    });
+    expect((await screen.findAllByText('Apurado TSE')).length).toBeGreaterThan(1);
+    expect(screen.getByText('12')).toBeInTheDocument();
+  });
+
   it('filtra somente os cadastros do cabo selecionado e envia o cabo para a API', async () => {
     render(<Crossing />);
     fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
@@ -135,7 +154,10 @@ describe('Crossing Page', () => {
 
     fireEvent.change(screen.getByLabelText('Cabo'), { target: { value: '10' } });
 
-    await waitFor(() => expect(api).toHaveBeenCalledWith(expect.stringContaining('caboId=10')));
+    await waitFor(() => {
+      expect(api).toHaveBeenCalledWith(expect.stringContaining('caboId=10'));
+      expect(screen.getAllByRole('table').length).toBeGreaterThan(0);
+    });
     const comparisonTable = screen.getAllByRole('table')[0];
     expect(within(comparisonTable).getAllByText('Felipe')).not.toHaveLength(0);
     expect(within(comparisonTable).queryByText('Neudo')).not.toBeInTheDocument();
@@ -173,7 +195,7 @@ describe('Crossing Page', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Ver nomes dos eleitores' }));
 
-    expect(await screen.findByText(/Eleitores das seções abaixo da meta/)).toBeInTheDocument();
+    expect(await screen.findByText(/Eleitores cadastrados nas seções abaixo da meta/)).toBeInTheDocument();
     expect(api).toHaveBeenCalledWith(expect.stringContaining('/elections/relatorio-faltantes/eleitores?'));
   });
 });
