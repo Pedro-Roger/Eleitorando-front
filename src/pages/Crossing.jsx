@@ -29,7 +29,6 @@ const buttonStyle = (bg, color = 'white') => ({
 function statusStyle(status) {
   if (status === 'OK') return { color: '#047857', background: '#ECFDF5' };
   if (status.startsWith('Faltam')) return { color: '#B45309', background: '#FFFBEB' };
-  if (status.startsWith('Apurado excede')) return { color: '#BE123C', background: '#FFF1F2' };
   return { color: '#64748B', background: '#F1F5F9' };
 }
 
@@ -250,7 +249,10 @@ export default function Crossing() {
                   Exportar relatório PDF
                 </button>
                 <button type="button" onClick={() => apiDownload(`/elections/inteligencia-eleitoral/eleitores/pdf${reportQuery()}`).catch((e) => setError(e.message || 'Não foi possível gerar o PDF detalhado.'))} style={{ padding: '10px 14px', border: 0, borderRadius: 8, background: '#2563EB', color: 'white', fontWeight: 700, cursor: 'pointer' }}>
-                  PDF eleitores detalhado
+                  PDF possíveis não votantes (detalhado)
+                </button>
+                <button type="button" onClick={() => apiDownload(`/elections/inteligencia-eleitoral/resumo-cabos/pdf${reportQuery()}`).catch((e) => setError(e.message || 'Não foi possível gerar o resumo por cabo.'))} style={{ padding: '10px 14px', border: 0, borderRadius: 8, background: '#0F766E', color: 'white', fontWeight: 700, cursor: 'pointer' }}>
+                  PDF resumo por cabo
                 </button>
                 <button type="button" onClick={() => apiDownload(`/elections/inteligencia-eleitoral/cabos/pdf${reportQuery()}`).catch((e) => setError(e.message || 'Não foi possível gerar o ranking de cabos.'))} style={{ padding: '10px 14px', border: 0, borderRadius: 8, background: '#7C3AED', color: 'white', fontWeight: 700, cursor: 'pointer' }}>
                   PDF ranking de cabos
@@ -320,7 +322,7 @@ export default function Crossing() {
                   <tbody>
                     {filteredRows.map((row) => {
                       const diff = Number(row.diferenca) || (Number(row.cadastrados) - Number(row.apurado));
-                      const displayStatus = row.status || (diff > 0 ? `Faltam ${diff} votos` : diff < 0 ? `Apurado excede em ${Math.abs(diff)}` : 'OK');
+                      const displayStatus = diff > 0 ? `Faltam ${formatCount(diff)} votos` : 'OK';
                       return (
                         <tr key={`${row.cabo}-${row.subcabo}-${row.zona}-${row.secao}`} style={{ borderBottom: '1px solid #F1F5F9' }}>
                           <td style={{ padding: '12px 8px', fontWeight: 600, whiteSpace: 'nowrap' }}>{row.cabo || '—'}</td>
@@ -387,15 +389,15 @@ export default function Crossing() {
                   <div style={{ overflowX: 'auto', marginBottom: 24 }}>
                     <table style={{ width: '100%', minWidth: 560, borderCollapse: 'collapse', fontSize: 14 }}>
                       <thead><tr style={{ background: '#F8FAFC', textAlign: 'left' }}>
-                        {['Cabo', 'Subcabo', 'Prometidos', 'Seções', 'Seções com faltantes'].map((heading) => <th key={heading} scope="col" style={{ padding: '10px 8px', borderBottom: '2px solid #E2E8F0', color: '#475569', whiteSpace: 'nowrap' }}>{heading}</th>)}
+                        {['Cabo', 'Subcabo', 'Prometidos', 'Seções', 'Seções com faltantes'].map((heading) => <th key={heading} scope="col" style={{ padding: '10px 8px', borderBottom: '2px solid #E2E8F0', color: '#475569', whiteSpace: 'nowrap', textAlign: ['Prometidos', 'Seções', 'Seções com faltantes'].includes(heading) ? 'right' : 'left' }}>{heading}</th>)}
                       </tr></thead>
                       <tbody>{report.summary.map((row) => (
                         <tr key={`${row.cabo}-${row.subcabo}`} style={{ borderBottom: '1px solid #F1F5F9' }}>
                           <td style={{ padding: '10px 8px', fontWeight: 600 }}>{row.cabo || '—'}</td>
                           <td style={{ padding: '10px 8px' }}>{row.subcabo || '—'}</td>
-                          <td style={{ padding: '10px 8px', fontWeight: 700, textAlign: 'right' }}>{formatCount(row.cadastrados)}</td>
-                          <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCount(row.secoes)}</td>
-                          <td style={{ padding: '10px 8px', color: row.secoesComFaltantes ? '#BE123C' : '#047857', fontWeight: 700, textAlign: 'right' }}>{formatCount(row.secoesComFaltantes)}</td>
+                          <td style={{ padding: '10px 8px', fontWeight: 700, fontSize: 16, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCount(row.cadastrados)}</td>
+                          <td style={{ padding: '10px 8px', fontWeight: 600, fontSize: 15, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCount(row.secoes)}</td>
+                          <td style={{ padding: '10px 8px', color: row.secoesComFaltantes ? '#BE123C' : '#047857', fontWeight: 700, fontSize: 15, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCount(row.secoesComFaltantes)}</td>
                         </tr>
                       ))}</tbody>
                     </table>
@@ -408,7 +410,7 @@ export default function Crossing() {
                     <div style={{ overflowX: 'auto' }}>
                           <table style={{ width: '100%', minWidth: 880, borderCollapse: 'collapse', fontSize: 14 }}>
                         <thead><tr style={{ background: '#FFF7ED', textAlign: 'left' }}>
-                          {['Equipes associadas', 'Cidade', 'Zona', 'Seção', 'Prometidos', 'Apurado TSE', 'Confirmados', 'Faltantes', '% faltantes', 'Status'].map((heading) => <th key={heading} scope="col" style={{ padding: '10px 8px', borderBottom: '2px solid #FED7AA', color: '#9A3412', whiteSpace: 'nowrap' }}>{heading}</th>)}
+                          {['Equipes associadas', 'Cidade', 'Zona', 'Seção', 'Prometidos', 'Apurado TSE', 'Confirmados', 'Faltantes', '% faltantes', 'Status'].map((heading) => <th key={heading} scope="col" style={{ padding: '10px 8px', borderBottom: '2px solid #FED7AA', color: '#9A3412', whiteSpace: 'nowrap', textAlign: ['Prometidos', 'Apurado TSE', 'Confirmados', 'Faltantes', '% faltantes'].includes(heading) ? 'right' : ['Zona', 'Seção', 'Status'].includes(heading) ? 'center' : 'left' }}>{heading}</th>)}
                         </tr></thead>
                         <tbody>{reportDetails.map((row) => (
                           <tr key={`${row.city || ''}-${row.zona}-${row.secao}`} style={{ borderBottom: '1px solid #F1F5F9' }}>
@@ -422,8 +424,8 @@ export default function Crossing() {
                             <td style={{ padding: '10px 8px', color: row.faltantes ? '#BE123C' : '#047857', fontWeight: 700, textAlign: 'right' }}>{formatCount(row.faltantes)}</td>
                             <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatMissingPercentage(row.cadastrados, row.faltantes)}</td>
                             <td style={{ padding: '10px 8px', textAlign: 'center' }}>
-                              <span style={{ ...statusStyle(row.apurado > row.cadastrados ? 'Apurado excede' : row.faltantes > 0 ? 'Faltam votos' : 'OK'), display: 'inline-block', padding: '4px 8px', borderRadius: 999, fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>
-                                {row.apurado > row.cadastrados ? 'Apurado excede' : row.faltantes > 0 ? `Faltam ${formatCount(row.faltantes)} votos` : 'OK'}
+                              <span style={{ ...statusStyle(row.apurado > row.cadastrados ? 'OK' : row.faltantes > 0 ? 'Faltam votos' : 'OK'), display: 'inline-block', padding: '4px 8px', borderRadius: 999, fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                {row.apurado > row.cadastrados ? 'OK' : row.faltantes > 0 ? `Faltam ${formatCount(row.faltantes)} votos` : 'OK'}
                               </span>
                             </td>
                           </tr>

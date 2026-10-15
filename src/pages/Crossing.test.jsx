@@ -19,11 +19,11 @@ vi.mock('../lib/api', () => ({
 const rows = [
   {
     city: 'FORTALEZA', cabo: 'Felipe', subcabo: 'Pedro', zona: '02', secao: '0533',
-    cadastrados: 2, apurado: 3, diferenca: -1, status: 'OK',
+    cadastrados: 2, apurado: 3, diferenca: -1, status: 'Apurado excede em 1 voto',
   },
   {
     city: 'FORTALEZA', cabo: 'Felipe', subcabo: 'João', zona: '03', secao: '0987',
-    cadastrados: 4, apurado: 5, diferenca: -1, status: 'OK',
+    cadastrados: 4, apurado: 5, diferenca: -1, status: 'Apurado excede em 1 voto',
   },
   {
     city: 'SOBRAL', cabo: 'Neudo', subcabo: '', zona: '04', secao: '0123',
@@ -80,6 +80,8 @@ describe('Crossing Page', () => {
     expect(within(table).getByText('0533')).toBeInTheDocument();
     expect(within(table).getByText('2')).toBeInTheDocument();
     expect(within(table).getByText('3')).toBeInTheDocument();
+    expect(within(table).getAllByText('OK')).toHaveLength(3);
+    expect(within(table).queryByText(/Apurado excede/)).not.toBeInTheDocument();
   });
 
   it('filtra a tabela por subcabo e zona sem remover os demais filtros', async () => {
@@ -125,10 +127,12 @@ describe('Crossing Page', () => {
     expect(within(screen.getAllByRole('table')[0]).getByText('FORTALEZA')).toBeInTheDocument();
     expect(within(screen.getAllByRole('table')[0]).queryByText('SOBRAL')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'PDF eleitores detalhado' }));
+    fireEvent.click(screen.getByRole('button', { name: 'PDF possíveis não votantes (detalhado)' }));
     expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('city=Fortaleza'));
     expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('zone=02'));
     expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('section=0533'));
+    fireEvent.click(screen.getByRole('button', { name: 'PDF resumo por cabo' }));
+    expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('/elections/inteligencia-eleitoral/resumo-cabos/pdf'));
   });
 
   it('aplica todos os filtros também ao resumo e informa o total oficial apurado', async () => {
@@ -187,6 +191,18 @@ describe('Crossing Page', () => {
     expect(screen.getAllByRole('columnheader', { name: 'Faltantes' }).length).toBeGreaterThan(0);
     expect(screen.getByText('16,7% dos prometidos')).toBeInTheDocument();
     expect(screen.getByText('Exportar relatório PDF')).toBeInTheDocument();
+  });
+
+  it('alinha os títulos numéricos com os valores do resumo por equipe', async () => {
+    render(<Crossing />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
+    expect(await screen.findByText('Resumo por cabo e subcabo')).toBeInTheDocument();
+
+    const summaryTable = screen.getAllByRole('table')[1];
+    expect(within(summaryTable).getByRole('columnheader', { name: 'Prometidos' })).toHaveStyle({ textAlign: 'right' });
+    expect(within(summaryTable).getByRole('columnheader', { name: 'Seções' })).toHaveStyle({ textAlign: 'right' });
+    expect(within(summaryTable).getByText('2')).toHaveStyle({ fontSize: '16px', textAlign: 'right' });
+    expect(within(summaryTable).getByText('2').closest('td')).toHaveStyle({ fontVariantNumeric: 'tabular-nums' });
   });
 
   it('exibe o relatório nominal ao clicar no botão de nomes', async () => {
