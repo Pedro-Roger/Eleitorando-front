@@ -22,27 +22,28 @@ const fullReport = {
   year: 2022,
   office: 'DEPUTADO ESTADUAL',
   turn: 1,
-  prometidos: 15,
-  entregue: 8,
-  faltante: 3,
-  excedente: 2,
-  compartilhadas: 1,
-  prometidosCompartilhados: 4,
-  prometidosSemApuracao: 0,
-  cobertura: 8 / 15,
+  totais: {
+    prometidos: 15,
+    entregue: 11,
+    faltante: 3,
+    excedente: 8,
+    prometidosCompartilhados: 0,
+    prometidosSemApuracao: 1,
+    cobertura: 11 / 15,
+  },
   cabos: [
     {
       id: 10,
       name: 'Felipe',
       prometidos: 8,
-      entregue: 3,
+      entregue: 7,
       faltante: 1,
-      excedente: 2,
+      excedente: 8,
       compartilhadas: 1,
-      prometidosCompartilhados: 4,
+      prometidosCompartilhados: 0,
       prometidosSemApuracao: 0,
-      cobertura: 0.375,
-      secoes: 2,
+      cobertura: 7 / 8,
+      secoes: 3,
       secoesComFaltantes: 1,
       subcabos: [
         { id: 12, name: 'João', prometidos: 5, secoes: 2, compartilhadas: 1 },
@@ -332,33 +333,37 @@ describe('Crossing Page', () => {
     });
   });
 
-  it('exibe os cartões com prometidos, entregue, faltante e cobertura do payload geral e os rótulos da seção', async () => {
+  it('exibe os cartões lendo report.totais sem somar cabos, incluindo Sem apuração TSE, e os rótulos da seção', async () => {
     render(<Crossing />);
     fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
 
     const summaryRegion = await screen.findByRole('region', { name: 'Resumo dos filtros' });
+    // Lê report.totais (15 prometidos, 11 entregue, 3 faltante, 1 sem apuração => 11 + 3 + 1 = 15), sem somar cabos (7 + 5 = 12 entregue)
     expect(within(summaryRegion).getByTestId('filter-total-prometidos')).toHaveTextContent('15');
-    expect(within(summaryRegion).getByTestId('filter-total-entregue')).toHaveTextContent('8');
+    expect(within(summaryRegion).getByTestId('filter-total-entregue')).toHaveTextContent('11');
     expect(within(summaryRegion).getByTestId('filter-total-faltantes')).toHaveTextContent('3');
-    expect(within(summaryRegion).getByTestId('filter-total-cobertura')).toHaveTextContent('53,3%');
+    expect(within(summaryRegion).getByTestId('filter-total-sem-apuracao')).toHaveTextContent('1');
+    expect(within(summaryRegion).getByText('Sem apuração TSE')).toBeInTheDocument();
+    expect(within(summaryRegion).getByTestId('filter-total-cobertura')).toHaveTextContent('73,3%');
     expect(within(summaryRegion).getByTestId('filter-total-faltantes').closest('.election-metric-missing')).toBeInTheDocument();
 
     expect((await screen.findAllByText('Entregue (TSE)')).length).toBeGreaterThan(0);
     expect(screen.getByText('Faltante · 50,0%')).toBeInTheDocument();
   });
 
-  it('lê entregue, faltante, prometidos e cobertura do cabo sem recalcular no front', async () => {
+  it('lê entregue, faltante, sem apuração, prometidos e cobertura do cabo sem recalcular no front', async () => {
     render(<Crossing />);
     fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
     await screen.findByText('Resumo por cabo e subcabo');
 
-    // Cabo Felipe (id 10): prometidos = 8, entregue = 3 (seção compartilhada não entra), faltante = 1, cobertura = 37,5%
+    // Cabo Felipe (id 10): prometidos = 8, entregue = 7 (conta a seção inteira do cabo), faltante = 1, sem apuração = 0, cobertura = 87,5%
     fireEvent.change(screen.getByLabelText('Cabo'), { target: { value: '10' } });
     const summaryRegion = screen.getByRole('region', { name: 'Resumo dos filtros' });
     expect(within(summaryRegion).getByTestId('filter-total-prometidos')).toHaveTextContent('8');
-    expect(within(summaryRegion).getByTestId('filter-total-entregue')).toHaveTextContent('3');
+    expect(within(summaryRegion).getByTestId('filter-total-entregue')).toHaveTextContent('7');
     expect(within(summaryRegion).getByTestId('filter-total-faltantes')).toHaveTextContent('1');
-    expect(within(summaryRegion).getByTestId('filter-total-cobertura')).toHaveTextContent('37,5%');
+    expect(within(summaryRegion).getByTestId('filter-total-sem-apuracao')).toHaveTextContent('0');
+    expect(within(summaryRegion).getByTestId('filter-total-cobertura')).toHaveTextContent('87,5%');
   });
 
   it('mostra apenas prometidos e seções exclusivas no filtro de subcabo, sem entregue', async () => {
@@ -457,7 +462,7 @@ describe('Crossing Page', () => {
     const summarySection = summaryHeading.closest('section');
 
     // Cabo com prometidos, entregue, faltante e cobertura do payload
-    expect(within(summarySection).getByText('8 prometidos · 3 entregue · 1 faltante · 37,5% cobertura')).toBeInTheDocument();
+    expect(within(summarySection).getByText('8 prometidos · 7 entregue · 1 faltante · 87,5% cobertura')).toBeInTheDocument();
 
     // Subcabo com prometidos e seções exclusivas (sem entregue/faltante)
     expect(within(summarySection).getByText('5 prometidos · 1 seções exclusivas')).toBeInTheDocument();

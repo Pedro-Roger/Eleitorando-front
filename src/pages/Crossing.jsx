@@ -19,29 +19,36 @@ const locKey = (city, zone, section) => `${norm(city)}|${padNum(zone, 2)}|${padN
 
 function combineMetrics(items = []) {
   if (!items.length) {
-    return { mode: 'default', prometidos: 0, entregue: 0, faltante: 0, cobertura: 0 };
+    return { mode: 'default', prometidos: 0, entregue: 0, faltante: 0, prometidosSemApuracao: 0, cobertura: 0 };
   }
   if (items.length === 1) {
     const item = items[0];
     const prometidos = Number(item.prometidos) || 0;
     const entregue = Number(item.entregue) || 0;
     const faltante = Number(item.faltante) || 0;
+    const prometidosSemApuracao = Number(item.prometidosSemApuracao) || 0;
     const cobertura = item.cobertura !== undefined
       ? Number(item.cobertura) || 0
       : (prometidos > 0 ? entregue / prometidos : 0);
-    return { mode: 'default', prometidos, entregue, faltante, cobertura };
+    return { mode: 'default', prometidos, entregue, faltante, prometidosSemApuracao, cobertura };
   }
   let prometidos = 0;
   let entregue = 0;
   let faltante = 0;
+  let prometidosSemApuracao = 0;
   for (const item of items) {
     prometidos += Number(item.prometidos) || 0;
     if (item.compartilhada) continue;
+    if (item.apuracaoDisponivel === false) {
+      prometidosSemApuracao += Number(item.prometidos) || 0;
+      continue;
+    }
     entregue += Number(item.entregue) || 0;
     faltante += Number(item.faltante) || 0;
+    prometidosSemApuracao += Number(item.prometidosSemApuracao) || 0;
   }
   const cobertura = prometidos > 0 ? entregue / prometidos : 0;
-  return { mode: 'default', prometidos, entregue, faltante, cobertura };
+  return { mode: 'default', prometidos, entregue, faltante, prometidosSemApuracao, cobertura };
 }
 
 function summarizeFilterTotals(report, filters, cabos, subcabos) {
@@ -50,7 +57,7 @@ function summarizeFilterTotals(report, filters, cabos, subcabos) {
   if (!report) {
     return subcaboFilter
       ? { mode: 'subcabo', prometidos: 0, secoesExclusivas: 0 }
-      : { mode: 'default', prometidos: 0, entregue: 0, faltante: 0, cobertura: 0 };
+      : { mode: 'default', prometidos: 0, entregue: 0, faltante: 0, prometidosSemApuracao: 0, cobertura: 0 };
   }
 
   const ranking = report.cabos || [];
@@ -156,9 +163,7 @@ function summarizeFilterTotals(report, filters, cabos, subcabos) {
   }
 
   if (caboFilter) return combineMetrics(matchedCabos);
-  if (report.totals) return combineMetrics([report.totals]);
-  if (report.prometidos !== undefined) return combineMetrics([report]);
-  return combineMetrics(ranking);
+  return combineMetrics(report.totais ? [report.totais] : []);
 }
 
 function exclusiveSectionsOfSubcabo(cabo, subcabo) {
@@ -321,7 +326,15 @@ export default function Crossing() {
   const summarySource = baseReport || report;
   const totals = useMemo(() => {
     const fromCurrent = !loading && report ? summarizeFilterTotals(report, filters, cabos, subcabos) : null;
-    if (fromCurrent && (fromCurrent.prometidos > 0 || fromCurrent.entregue > 0 || fromCurrent.faltante > 0 || fromCurrent.secoesExclusivas > 0 || !baseReport)) {
+    if (
+      fromCurrent &&
+      (fromCurrent.prometidos > 0 ||
+        fromCurrent.entregue > 0 ||
+        fromCurrent.faltante > 0 ||
+        fromCurrent.prometidosSemApuracao > 0 ||
+        fromCurrent.secoesExclusivas > 0 ||
+        !baseReport)
+    ) {
       return fromCurrent;
     }
     return summarizeFilterTotals(summarySource, filters, cabos, subcabos);
@@ -379,6 +392,10 @@ export default function Crossing() {
                     <div className="election-metric-missing">
                       <strong data-testid="filter-total-faltantes">{count(totals.faltante)}</strong>
                       <span>Faltantes</span>
+                    </div>
+                    <div className="election-metric-small">
+                      <strong data-testid="filter-total-sem-apuracao">{count(totals.prometidosSemApuracao)}</strong>
+                      <span>Sem apuração TSE</span>
                     </div>
                     <div>
                       <strong data-testid="filter-total-cobertura">{formatCoverage(totals.cobertura)}</strong>
