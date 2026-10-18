@@ -17,15 +17,15 @@ const padNum = (value, width) => {
 };
 const locKey = (city, zone, section) => `${norm(city)}|${padNum(zone, 2)}|${padNum(section, 4)}`;
 
-function combineMetrics(items) {
-  if (!items || !items.length) {
+function combineMetrics(items = []) {
+  if (!items.length) {
     return { mode: 'default', prometidos: 0, entregue: 0, faltante: 0, cobertura: 0 };
   }
   if (items.length === 1) {
     const item = items[0];
     const prometidos = Number(item.prometidos) || 0;
-    const entregue = Number(item.entregue ?? item.votos ?? item.possivelmenteVotaram) || 0;
-    const faltante = Number(item.faltante ?? item.faltantes) || 0;
+    const entregue = Number(item.entregue) || 0;
+    const faltante = Number(item.faltante) || 0;
     const cobertura = item.cobertura !== undefined
       ? Number(item.cobertura) || 0
       : (prometidos > 0 ? entregue / prometidos : 0);
@@ -37,8 +37,8 @@ function combineMetrics(items) {
   for (const item of items) {
     prometidos += Number(item.prometidos) || 0;
     if (item.compartilhada) continue;
-    entregue += Number(item.entregue ?? item.votos ?? item.possivelmenteVotaram) || 0;
-    faltante += Number(item.faltante ?? item.faltantes) || 0;
+    entregue += Number(item.entregue) || 0;
+    faltante += Number(item.faltante) || 0;
   }
   const cobertura = prometidos > 0 ? entregue / prometidos : 0;
   return { mode: 'default', prometidos, entregue, faltante, cobertura };
@@ -64,28 +64,16 @@ function summarizeFilterTotals(report, filters, cabos, subcabos) {
   const subFromRanking = subcaboFilter
     ? ranking.flatMap((c) => c.subcabos || []).find((s) => String(s.id) === subcaboFilter)
     : null;
-  const targetSubcaboName = selectedSubcaboTitle || subFromRanking?.name || (subcaboFilter ? report.filters?.subcabo : '') || '';
+  const targetSubcaboName = selectedSubcaboTitle || subFromRanking?.name || '';
 
-  const matchesCabo = (caboObj) => {
-    if (!caboFilter) return true;
-    const id = caboObj.id ?? caboObj.caboId;
-    const name = caboObj.name ?? caboObj.cabo;
-    if (id !== undefined && id !== null && String(id) === caboFilter) return true;
-    if (selectedCaboTitle && norm(name) === norm(selectedCaboTitle)) return true;
-    if (ranking.length === 1 && report.filters?.cabo && norm(name) === norm(report.filters.cabo)) return true;
-    return false;
-  };
+  const matchedCabos = caboFilter
+    ? ranking.filter((c) => String(c.id) === caboFilter || (selectedCaboTitle && norm(c.name) === norm(selectedCaboTitle)))
+    : ranking;
 
-  const matchesSubcabo = (subObj) => {
-    if (!subcaboFilter) return true;
-    const id = subObj.id ?? subObj.subcaboId;
-    const name = subObj.name ?? subObj.subcabo;
-    if (id !== undefined && id !== null && String(id) === subcaboFilter) return true;
-    if (targetSubcaboName && norm(name) === norm(targetSubcaboName)) return true;
-    return false;
-  };
-
-  const matchedCabos = ranking.filter(matchesCabo);
+  const matchesSubcabo = (sub) => (
+    (sub.id !== undefined && String(sub.id) === subcaboFilter)
+    || (targetSubcaboName && norm(sub.name) === norm(targetSubcaboName))
+  );
   const hasLocationFilter = Boolean(cityFilter || neighborhoodFilter || zoneFilter || sectionFilter);
 
   if (subcaboFilter) {
@@ -94,36 +82,25 @@ function summarizeFilterTotals(report, filters, cabos, subcabos) {
     const seenExclusive = new Set();
 
     for (const cabo of matchedCabos) {
-      const caboKey = cabo.id ?? norm(cabo.name ?? cabo.cabo);
       const subEntry = (cabo.subcabos || []).find(matchesSubcabo);
-
       if (!hasLocationFilter && subEntry) {
         prometidos += Number(subEntry.prometidos) || 0;
-        if (subEntry.secoesExclusivas !== undefined) {
-          secoesExclusivas += Number(subEntry.secoesExclusivas) || 0;
-          continue;
-        }
-        if (typeof subEntry.secoes === 'number' && (subEntry.compartilhadas !== undefined || subEntry.secoesCompartilhadas !== undefined)) {
-          secoesExclusivas += Math.max(0, subEntry.secoes - (Number(subEntry.compartilhadas ?? subEntry.secoesCompartilhadas) || 0));
+        if (typeof subEntry.secoes === 'number' && typeof subEntry.compartilhadas === 'number') {
+          secoesExclusivas += Math.max(0, subEntry.secoes - subEntry.compartilhadas);
           continue;
         }
       }
 
       for (const city of cabo.cidades || []) {
-        if (cityFilter && norm(city.name ?? city.city) !== cityFilter) continue;
-        for (const sub of city.subcabos || []) {
-          if (!matchesSubcabo(sub)) continue;
+        if (cityFilter && norm(city.name) !== cityFilter) continue;
+        for (const sub of (city.subcabos || []).filter(matchesSubcabo)) {
           for (const zone of sub.zonas || []) {
-            if (zoneFilter && padNum(zone.name ?? zone.zona, 2) !== padNum(zoneFilter, 2)) continue;
+            if (zoneFilter && padNum(zone.name, 2) !== padNum(zoneFilter, 2)) continue;
             for (const sec of zone.secoes || []) {
-              if (sectionFilter && padNum(sec.name ?? sec.secao, 4) !== padNum(sectionFilter, 4)) continue;
-              if (neighborhoodFilter && Array.isArray(sec.pessoas) && !sec.pessoas.some((p) => norm(p.bairro) === neighborhoodFilter)) {
-                continue;
-              }
-              if (hasLocationFilter || !subEntry) {
-                prometidos += Number(sec.prometidos) || 0;
-              }
-              const secKey = `${caboKey}|${locKey(city.name ?? city.city, zone.name ?? zone.zona, sec.name ?? sec.secao)}`;
+              if (sectionFilter && padNum(sec.name, 4) !== padNum(sectionFilter, 4)) continue;
+              if (neighborhoodFilter && !(sec.pessoas || []).some((p) => norm(p.bairro) === neighborhoodFilter)) continue;
+              if (hasLocationFilter || !subEntry) prometidos += Number(sec.prometidos) || 0;
+              const secKey = `${cabo.id}|${locKey(city.name, zone.name, sec.name)}`;
               if (!sec.compartilhada && !seenExclusive.has(secKey)) {
                 seenExclusive.add(secKey);
                 secoesExclusivas += 1;
@@ -141,27 +118,18 @@ function summarizeFilterTotals(report, filters, cabos, subcabos) {
     const matchedSections = [];
     const seen = new Set();
     for (const cabo of matchedCabos) {
-      const caboKey = cabo.id ?? norm(cabo.name ?? cabo.cabo);
       for (const city of cabo.cidades || []) {
-        const cityName = city.name ?? city.city;
-        if (cityFilter && norm(cityName) !== cityFilter) continue;
+        if (cityFilter && norm(city.name) !== cityFilter) continue;
         for (const sub of city.subcabos || []) {
           for (const zone of sub.zonas || []) {
-            const zoneName = zone.name ?? zone.zona;
-            if (zoneFilter && padNum(zoneName, 2) !== padNum(zoneFilter, 2)) continue;
+            if (zoneFilter && padNum(zone.name, 2) !== padNum(zoneFilter, 2)) continue;
             for (const sec of zone.secoes || []) {
-              const secName = sec.name ?? sec.secao;
-              if (sectionFilter && padNum(secName, 4) !== padNum(sectionFilter, 4)) continue;
-              if (neighborhoodFilter && Array.isArray(sec.pessoas) && !sec.pessoas.some((p) => norm(p.bairro) === neighborhoodFilter)) {
-                continue;
-              }
-              const secKey = `${caboKey}|${locKey(cityName, zoneName, secName)}`;
+              if (sectionFilter && padNum(sec.name, 4) !== padNum(sectionFilter, 4)) continue;
+              if (neighborhoodFilter && !(sec.pessoas || []).some((p) => norm(p.bairro) === neighborhoodFilter)) continue;
+              const secKey = `${cabo.id}|${locKey(city.name, zone.name, sec.name)}`;
               if (seen.has(secKey)) continue;
               seen.add(secKey);
-              matchedSections.push({
-                ...sec,
-                prometidos: Number(sec.totalPrometidoNaSecao ?? sec.prometidos) || 0,
-              });
+              matchedSections.push(sec);
             }
           }
         }
@@ -171,51 +139,19 @@ function summarizeFilterTotals(report, filters, cabos, subcabos) {
   }
 
   if (neighborhoodFilter) {
-    if (!caboFilter && Array.isArray(report.cidades)) {
-      const bairros = report.cidades
-        .filter((c) => !cityFilter || norm(c.name ?? c.city) === cityFilter)
-        .flatMap((c) => c.bairros || [])
-        .filter((b) => norm(b.name ?? b.bairro) === neighborhoodFilter);
-      if (bairros.length) return combineMetrics(bairros);
-    }
-    const bairros = [];
-    for (const cabo of matchedCabos) {
-      for (const city of cabo.cidades || []) {
-        if (cityFilter && norm(city.name ?? city.city) !== cityFilter) continue;
-        for (const bairro of city.bairros || []) {
-          if (norm(bairro.name ?? bairro.bairro) === neighborhoodFilter) {
-            bairros.push(bairro);
-          }
-        }
-      }
-      for (const bairro of cabo.bairros || []) {
-        if (norm(bairro.name ?? bairro.bairro) === neighborhoodFilter) {
-          bairros.push(bairro);
-        }
-      }
-    }
+    const cities = matchedCabos.flatMap((c) => c.cidades || []).filter((c) => !cityFilter || norm(c.name) === cityFilter);
+    const bairros = cities.flatMap((c) => c.bairros || []).filter((b) => norm(b.name) === neighborhoodFilter);
     return combineMetrics(bairros);
   }
 
   if (cityFilter) {
-    if (!caboFilter && Array.isArray(report.cidades)) {
-      const cities = report.cidades.filter((c) => norm(c.name ?? c.city) === cityFilter);
-      if (cities.length) return combineMetrics(cities);
-    }
-    const cities = matchedCabos.flatMap((cabo) => (cabo.cidades || []).filter((c) => norm(c.name ?? c.city) === cityFilter));
+    const cities = matchedCabos.flatMap((c) => c.cidades || []).filter((c) => norm(c.name) === cityFilter);
     return combineMetrics(cities);
   }
 
-  if (caboFilter) {
-    return combineMetrics(matchedCabos);
-  }
-
-  if (report.totals && (report.totals.entregue !== undefined || report.totals.prometidos !== undefined)) {
-    return combineMetrics([report.totals]);
-  }
-  if (report.entregue !== undefined || report.prometidos !== undefined) {
-    return combineMetrics([report]);
-  }
+  if (caboFilter) return combineMetrics(matchedCabos);
+  if (report.totals) return combineMetrics([report.totals]);
+  if (report.prometidos !== undefined) return combineMetrics([report]);
   return combineMetrics(ranking);
 }
 
@@ -407,8 +343,8 @@ export default function Crossing() {
                       <div className="election-metrics">
                         <div><strong>{count(section.prometidos)}</strong><span>Prometeram</span></div>
                         <div><strong>{count(section.apuradoTseNaSecao)}</strong><span>Resultado na seção</span></div>
-                        <div><strong>{count(section.entregue ?? section.possivelmenteVotaram)}</strong><span>Possivelmente votaram</span></div>
-                        <div className="election-metric-missing"><strong>{count(section.faltante ?? section.faltantes)}</strong><span>Possíveis faltantes · {percent(section.percentualFaltantes)}</span></div>
+                        <div><strong>{count(section.entregue)}</strong><span>Entregue (TSE)</span></div>
+                        <div className="election-metric-missing"><strong>{count(section.faltante)}</strong><span>Faltante · {percent(section.percentualFaltantes)}</span></div>
                       </div>
                       <h5>Pessoas cadastradas nesta seção</h5>
                       {section.pessoas.map((person, index) => (
@@ -422,8 +358,27 @@ export default function Crossing() {
                 </section>
                 <section className="election-report" aria-labelledby="summary-title">
                   <div className="election-report-heading">
-                    <h3 id="summary-title">Resumo por cabo e subcabo</h3>
-                    <button className="election-download secondary" type="button" onClick={() => download('resumo-cabos')}>Baixar PDF do resumo</button>
+                    <div>
+                      <h3 id="summary-title">Resumo por cabo e subcabo</h3>
+                      {(!filters.caboId || !filters.subcaboId) && (
+                        <p>
+                          {!filters.caboId
+                            ? 'Selecione um cabo nos filtros para habilitar o relatório por cabo, e um subcabo para o relatório por subcabo.'
+                            : 'Selecione um subcabo nos filtros para habilitar o relatório por subcabo.'}
+                        </p>
+                      )}
+                    </div>
+                    <div className="election-download-actions">
+                      <button className="election-download" type="button" onClick={() => download('relatorio-geral')}>
+                        Baixar relatório geral
+                      </button>
+                      <button className="election-download secondary" type="button" disabled={!filters.caboId} onClick={() => download('relatorio-cabo')}>
+                        Baixar relatório por cabo
+                      </button>
+                      <button className="election-download secondary" type="button" disabled={!filters.subcaboId} onClick={() => download('relatorio-subcabo')}>
+                        Baixar relatório por subcabo
+                      </button>
+                    </div>
                   </div>
                   {!ranking.length ? <div className="empty">Nenhum cadastro para os filtros.</div> : ranking.map((cabo) => (
                     <div key={cabo.id} className="election-summary-cabo">

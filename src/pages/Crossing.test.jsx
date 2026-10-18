@@ -45,8 +45,8 @@ const fullReport = {
       secoes: 2,
       secoesComFaltantes: 1,
       subcabos: [
-        { id: 12, name: 'João', prometidos: 5, secoes: 2, compartilhadas: 1, secoesExclusivas: 1 },
-        { id: 11, name: 'Pedro', prometidos: 3, secoes: 2, compartilhadas: 1, secoesExclusivas: 1 },
+        { id: 12, name: 'João', prometidos: 5, secoes: 2, compartilhadas: 1 },
+        { id: 11, name: 'Pedro', prometidos: 3, secoes: 2, compartilhadas: 1 },
       ],
       cidades: [
         {
@@ -62,7 +62,6 @@ const fullReport = {
           bairros: [
             {
               name: 'ALDEOTA',
-              bairro: 'ALDEOTA',
               prometidos: 2,
               entregue: 1,
               faltante: 1,
@@ -74,7 +73,6 @@ const fullReport = {
             },
             {
               name: 'CENTRO',
-              bairro: 'CENTRO',
               prometidos: 6,
               entregue: 2,
               faltante: 0,
@@ -106,8 +104,6 @@ const fullReport = {
                       excedente: 2,
                       compartilhada: false,
                       cobertura: 1,
-                      possivelmenteVotaram: 2,
-                      faltantes: 0,
                       percentualFaltantes: 0,
                       pessoas: [
                         { name: 'Eleitor 1', subcabo: 'João', subcaboId: 12, bairro: 'CENTRO', city: 'FORTALEZA', zona: '03', secao: '0987' },
@@ -125,8 +121,6 @@ const fullReport = {
                       excedente: 6,
                       compartilhada: true,
                       cobertura: 1,
-                      possivelmenteVotaram: 4,
-                      faltantes: 0,
                       percentualFaltantes: 0,
                       pessoas: [
                         { name: 'Eleitor 3', subcabo: 'João', subcaboId: 12, bairro: 'CENTRO', city: 'FORTALEZA', zona: '03', secao: '0999' },
@@ -158,8 +152,6 @@ const fullReport = {
                       excedente: 0,
                       compartilhada: false,
                       cobertura: 0.5,
-                      possivelmenteVotaram: 1,
-                      faltantes: 1,
                       percentualFaltantes: 50,
                       pessoas: [
                         { name: 'Maria Silva', subcabo: 'Pedro', subcaboId: 11, bairro: 'ALDEOTA', city: 'FORTALEZA', zona: '02', secao: '0533' },
@@ -183,8 +175,6 @@ const fullReport = {
                       excedente: 6,
                       compartilhada: true,
                       cobertura: 1,
-                      possivelmenteVotaram: 4,
-                      faltantes: 0,
                       percentualFaltantes: 0,
                       pessoas: [
                         { name: 'Pedro Comp', subcabo: 'Pedro', subcaboId: 11, bairro: 'CENTRO', city: 'FORTALEZA', zona: '03', secao: '0999' },
@@ -212,7 +202,7 @@ const fullReport = {
       secoes: 1,
       secoesComFaltantes: 1,
       subcabos: [
-        { id: 13, name: 'Ana', prometidos: 7, secoes: 1, compartilhadas: 0, secoesExclusivas: 1 },
+        { id: 13, name: 'Ana', prometidos: 7, secoes: 1, compartilhadas: 0 },
       ],
       cidades: [
         {
@@ -228,7 +218,6 @@ const fullReport = {
           bairros: [
             {
               name: 'DOM EXPEDITO',
-              bairro: 'DOM EXPEDITO',
               prometidos: 7,
               entregue: 5,
               faltante: 2,
@@ -260,8 +249,6 @@ const fullReport = {
                       excedente: 0,
                       compartilhada: false,
                       cobertura: 5 / 7,
-                      possivelmenteVotaram: 5,
-                      faltantes: 2,
                       percentualFaltantes: 28.6,
                       pessoas: Array.from({ length: 7 }, (_, i) => ({
                         name: `Eleitor Sobral ${i + 1}`, subcabo: 'Ana', subcaboId: 13, bairro: 'DOM EXPEDITO', city: 'SOBRAL', zona: '04', secao: '0123',
@@ -291,8 +278,6 @@ const fullReport = {
       excedente: 0,
       compartilhada: false,
       cobertura: 0.5,
-      possivelmenteVotaram: 1,
-      faltantes: 1,
       percentualFaltantes: 50,
       pessoas: [
         { name: 'Maria Silva', subcabo: 'Pedro', subcaboId: 11, bairro: 'ALDEOTA', city: 'FORTALEZA', zona: '02', secao: '0533' },
@@ -313,8 +298,6 @@ const fullReport = {
       excedente: 0,
       compartilhada: false,
       cobertura: 5 / 7,
-      possivelmenteVotaram: 5,
-      faltantes: 2,
       percentualFaltantes: 28.6,
       pessoas: Array.from({ length: 7 }, (_, i) => ({
         name: `Eleitor Sobral ${i + 1}`, subcabo: 'Ana', subcaboId: 13, bairro: 'DOM EXPEDITO', city: 'SOBRAL', zona: '04', secao: '0123',
@@ -349,7 +332,7 @@ describe('Crossing Page', () => {
     });
   });
 
-  it('exibe os cartões com prometidos, entregue, faltante e cobertura do payload geral', async () => {
+  it('exibe os cartões com prometidos, entregue, faltante e cobertura do payload geral e os rótulos da seção', async () => {
     render(<Crossing />);
     fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
 
@@ -359,6 +342,9 @@ describe('Crossing Page', () => {
     expect(within(summaryRegion).getByTestId('filter-total-faltantes')).toHaveTextContent('3');
     expect(within(summaryRegion).getByTestId('filter-total-cobertura')).toHaveTextContent('53,3%');
     expect(within(summaryRegion).getByTestId('filter-total-faltantes').closest('.election-metric-missing')).toBeInTheDocument();
+
+    expect((await screen.findAllByText('Entregue (TSE)')).length).toBeGreaterThan(0);
+    expect(screen.getByText('Faltante · 50,0%')).toBeInTheDocument();
   });
 
   it('lê entregue, faltante, prometidos e cobertura do cabo sem recalcular no front', async () => {
@@ -427,23 +413,41 @@ describe('Crossing Page', () => {
     expect(within(subcaboFilter).queryByRole('option', { name: 'Ana' })).not.toBeInTheDocument();
   });
 
-  it('envia os filtros aplicados aos downloads de PDF', async () => {
+  it('habilita os botões de download conforme os filtros e chama as URLs corretas com parâmetros', async () => {
     render(<Crossing />);
     fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
     await screen.findByText('Resumo por cabo e subcabo');
 
+    const btnGeral = screen.getByRole('button', { name: 'Baixar relatório geral' });
+    const btnCabo = screen.getByRole('button', { name: 'Baixar relatório por cabo' });
+    const btnSubcabo = screen.getByRole('button', { name: 'Baixar relatório por subcabo' });
+
+    expect(btnGeral).toBeEnabled();
+    expect(btnCabo).toBeDisabled();
+    expect(btnSubcabo).toBeDisabled();
+    expect(screen.getByText(/Selecione um cabo nos filtros para habilitar o relatório por cabo/)).toBeInTheDocument();
+
     fireEvent.change(screen.getByLabelText('Cidade'), { target: { value: 'Fortaleza' } });
-    fireEvent.change(screen.getByLabelText('Zona'), { target: { value: '02' } });
-    fireEvent.change(screen.getByLabelText('Seção'), { target: { value: '0533' } });
+    await screen.findByRole('button', { name: 'Baixar relatório geral' });
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Baixar PDF de possíveis não votantes' }));
-    expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('/elections/inteligencia-eleitoral/eleitores/pdf?'));
+    fireEvent.click(screen.getByRole('button', { name: 'Baixar relatório geral' }));
+    expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('/elections/inteligencia-eleitoral/relatorio-geral/pdf?'));
     expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('city=Fortaleza'));
-    expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('zone=02'));
-    expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('section=0533'));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Baixar PDF do resumo' }));
-    expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('/elections/inteligencia-eleitoral/resumo-cabos/pdf?'));
+    fireEvent.change(screen.getByLabelText('Cabo'), { target: { value: '10' } });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Baixar relatório por cabo' })).toBeEnabled());
+    expect(screen.getByRole('button', { name: 'Baixar relatório por subcabo' })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Baixar relatório por cabo' }));
+    expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('/elections/inteligencia-eleitoral/relatorio-cabo/pdf?'));
+    expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('caboId=10'));
+
+    fireEvent.change(screen.getByLabelText('Subcabo'), { target: { value: '11' } });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Baixar relatório por subcabo' })).toBeEnabled());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Baixar relatório por subcabo' }));
+    expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('/elections/inteligencia-eleitoral/relatorio-subcabo/pdf?'));
+    expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('subcaboId=11'));
   });
 
   it('mostra mensagem vazia quando a candidata não possui registros', async () => {

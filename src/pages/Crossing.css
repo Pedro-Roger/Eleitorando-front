@@ -49,6 +49,8 @@
 }
 
 .election-download.secondary { background: var(--success); }
+.election-download:disabled { opacity: 0.5; cursor: not-allowed; }
+.election-download-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .election-clear { align-self: end; background: var(--secondary); color: #fff; }
 
 .election-reports button:focus-visible,
