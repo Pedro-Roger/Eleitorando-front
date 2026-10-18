@@ -450,6 +450,45 @@ describe('Crossing Page', () => {
     expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('subcaboId=11'));
   });
 
+  it('exibe na árvore o bairro com seus números, nomes só em seção com falta e seção compartilhada sem números de TSE', async () => {
+    render(<Crossing />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
+    const summaryHeading = await screen.findByText('Resumo por cabo e subcabo');
+    const summarySection = summaryHeading.closest('section');
+
+    // Cabo com prometidos, entregue, faltante e cobertura do payload
+    expect(within(summarySection).getByText('8 prometidos · 3 entregue · 1 faltante · 37,5% cobertura')).toBeInTheDocument();
+
+    // Subcabo com prometidos e seções exclusivas (sem entregue/faltante)
+    expect(within(summarySection).getByText('5 prometidos · 1 seções exclusivas')).toBeInTheDocument();
+    expect(within(summarySection).getByText('3 prometidos · 1 seções exclusivas')).toBeInTheDocument();
+
+    // Bairro explícito com prometidos, entregue e faltante do próprio bairro
+    expect(within(summarySection).getByText(/Bairro:\s*ALDEOTA/)).toBeInTheDocument();
+    expect(within(summarySection).getByText('2 prometidos · 1 entregue · 1 faltante')).toBeInTheDocument();
+    expect(within(summarySection).getAllByText(/Bairro:\s*CENTRO/).length).toBeGreaterThan(0);
+    expect(within(summarySection).getAllByText('6 prometidos · 2 entregue · 0 faltante').length).toBeGreaterThan(0);
+
+    // Seção exclusiva sem falta (0987): mostra entregue (TSE) e faltante, só a contagem de pessoas, sem nomes
+    expect(within(summarySection).getByText('2 prometidos · 2 entregue (TSE) · 0 faltante')).toBeInTheDocument();
+    expect(within(summarySection).getByText('2 pessoa(s) cadastrada(s)')).toBeInTheDocument();
+    expect(within(summarySection).queryByText(/Eleitor 1/)).not.toBeInTheDocument();
+    expect(within(summarySection).queryByText(/Eleitor 2/)).not.toBeInTheDocument();
+
+    // Seção exclusiva com falta (0533): mostra entregue (TSE) e faltante, e lista nomes com "Voto faltante possível"
+    expect(within(summarySection).getByText('2 prometidos · 1 entregue (TSE) · 1 faltante')).toBeInTheDocument();
+    expect(within(summarySection).getByText('Maria Silva — Voto faltante possível')).toBeInTheDocument();
+    expect(within(summarySection).getByText('José Santos — Voto faltante possível')).toBeInTheDocument();
+
+    // Seção compartilhada (0999): mostra "Compartilhada, sem atribuição" no lugar dos números de TSE e não lista nomes
+    expect(within(summarySection).getByText('3 prometidos · Compartilhada, sem atribuição')).toBeInTheDocument();
+    expect(within(summarySection).getByText('1 prometidos · Compartilhada, sem atribuição')).toBeInTheDocument();
+    expect(within(summarySection).queryByText(/10 entregue/)).not.toBeInTheDocument();
+    expect(within(summarySection).queryByText(/4 entregue \(TSE\)/)).not.toBeInTheDocument();
+    expect(within(summarySection).queryByText(/Eleitor 3/)).not.toBeInTheDocument();
+    expect(within(summarySection).queryByText(/Pedro Comp/)).not.toBeInTheDocument();
+  });
+
   it('mostra mensagem vazia quando a candidata não possui registros', async () => {
     api.mockImplementation((path) => {
       if (path === '/candidates') return Promise.resolve({ candidates: [{ id: 1, name: 'Keivia Dias' }] });

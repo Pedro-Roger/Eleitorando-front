@@ -231,8 +231,12 @@
 .election-summary-city h5 { font-size: 21px; line-height: 1.35; }
 .election-summary-subcabo { margin: 14px 0 0 16px; }
 .election-summary-subcabo > strong { font-size: 18px; line-height: 1.4; }
+.election-summary-bairro { margin: 12px 0 0 16px; }
+.election-summary-bairro > strong { font-size: 17px; line-height: 1.4; color: var(--text); }
 .election-summary-zone { margin: 10px 0 0 16px; font-size: 17px; }
-.election-summary-section { margin: 5px 0 0 16px; color: var(--muted); font-size: 16px; }
+.election-summary-section { margin: 6px 0 0 16px; color: var(--muted); font-size: 16px; }
+.election-summary-people { margin: 4px 0 8px 18px; color: var(--text); font-size: 15px; line-height: 1.45; }
+.election-summary-people-count { margin: 2px 0 6px 12px; color: var(--muted); font-size: 15px; }
 
 @media (max-width: 760px) {
   .election-report-heading .election-download { width: 100%; }
@@ -261,6 +265,7 @@
   .election-clear { grid-column: 1 / -1; }
   .election-summary-city,
   .election-summary-subcabo,
+  .election-summary-bairro,
   .election-summary-zone,
   .election-summary-section { margin-left: 10px; }
 }

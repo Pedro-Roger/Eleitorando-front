@@ -94,7 +94,8 @@ function summarizeFilterTotals(report, filters, cabos, subcabos) {
       for (const city of cabo.cidades || []) {
         if (cityFilter && norm(city.name) !== cityFilter) continue;
         for (const sub of (city.subcabos || []).filter(matchesSubcabo)) {
-          for (const zone of sub.zonas || []) {
+          const zones = sub.bairros ? sub.bairros.flatMap((b) => b.zonas || []) : (sub.zonas || []);
+          for (const zone of zones) {
             if (zoneFilter && padNum(zone.name, 2) !== padNum(zoneFilter, 2)) continue;
             for (const sec of zone.secoes || []) {
               if (sectionFilter && padNum(sec.name, 4) !== padNum(sectionFilter, 4)) continue;
@@ -121,7 +122,8 @@ function summarizeFilterTotals(report, filters, cabos, subcabos) {
       for (const city of cabo.cidades || []) {
         if (cityFilter && norm(city.name) !== cityFilter) continue;
         for (const sub of city.subcabos || []) {
-          for (const zone of sub.zonas || []) {
+          const zones = sub.bairros ? sub.bairros.flatMap((b) => b.zonas || []) : (sub.zonas || []);
+          for (const zone of zones) {
             if (zoneFilter && padNum(zone.name, 2) !== padNum(zoneFilter, 2)) continue;
             for (const sec of zone.secoes || []) {
               if (sectionFilter && padNum(sec.name, 4) !== padNum(sectionFilter, 4)) continue;
@@ -140,8 +142,12 @@ function summarizeFilterTotals(report, filters, cabos, subcabos) {
 
   if (neighborhoodFilter) {
     const cities = matchedCabos.flatMap((c) => c.cidades || []).filter((c) => !cityFilter || norm(c.name) === cityFilter);
-    const bairros = cities.flatMap((c) => c.bairros || []).filter((b) => norm(b.name) === neighborhoodFilter);
-    return combineMetrics(bairros);
+    const cityBairros = cities.flatMap((c) => c.bairros || []).filter((b) => norm(b.name) === neighborhoodFilter);
+    const subBairros = cities
+      .flatMap((c) => c.subcabos || [])
+      .flatMap((s) => s.bairros || [])
+      .filter((b) => norm(b.name) === neighborhoodFilter);
+    return combineMetrics(cityBairros.length ? cityBairros : subBairros);
   }
 
   if (cityFilter) {
@@ -153,6 +159,66 @@ function summarizeFilterTotals(report, filters, cabos, subcabos) {
   if (report.totals) return combineMetrics([report.totals]);
   if (report.prometidos !== undefined) return combineMetrics([report]);
   return combineMetrics(ranking);
+}
+
+function exclusiveSectionsOfSubcabo(cabo, subcabo) {
+  const fromCabo = (cabo.subcabos || []).find(
+    (s) => (s.id !== undefined && String(s.id) === String(subcabo.id)) || norm(s.name) === norm(subcabo.name)
+  );
+  if (fromCabo && typeof fromCabo.secoes === 'number' && typeof fromCabo.compartilhadas === 'number') {
+    return Math.max(0, fromCabo.secoes - fromCabo.compartilhadas);
+  }
+  if (typeof subcabo.secoes === 'number' && typeof subcabo.compartilhadas === 'number') {
+    return Math.max(0, subcabo.secoes - subcabo.compartilhadas);
+  }
+  const zones = subcabo.bairros ? subcabo.bairros.flatMap((b) => b.zonas || []) : (subcabo.zonas || []);
+  const seen = new Set();
+  for (const zone of zones) {
+    for (const sec of zone.secoes || []) {
+      if (!sec.compartilhada) seen.add(`${zone.name}|${sec.name}`);
+    }
+  }
+  return seen.size;
+}
+
+function bairrosOfSubcabo(subcabo, city) {
+  if (Array.isArray(subcabo.bairros)) return subcabo.bairros;
+  const cityBairroMap = new Map((city.bairros || []).map((b) => [norm(b.name), b]));
+  const byBairro = new Map();
+  for (const zone of subcabo.zonas || []) {
+    for (const sec of zone.secoes || []) {
+      const bairroName = sec.pessoas?.[0]?.bairro || 'Bairro não informado';
+      const bKey = norm(bairroName);
+      const cityBairro = cityBairroMap.get(bKey);
+      const entry = byBairro.get(bKey) || {
+        name: cityBairro?.name || bairroName,
+        prometidos: cityBairro ? Number(cityBairro.prometidos) || 0 : 0,
+        entregue: cityBairro ? Number(cityBairro.entregue) || 0 : 0,
+        faltante: cityBairro ? Number(cityBairro.faltante) || 0 : 0,
+        fromCity: Boolean(cityBairro),
+        zonas: new Map(),
+      };
+      if (!entry.fromCity) {
+        entry.prometidos += Number(sec.prometidos) || 0;
+        if (!sec.compartilhada) {
+          entry.entregue += Number(sec.entregue) || 0;
+          entry.faltante += Number(sec.faltante) || 0;
+        }
+      }
+      const zEntry = entry.zonas.get(zone.name) || { name: zone.name, prometidos: 0, secoes: [] };
+      zEntry.prometidos += Number(sec.prometidos) || 0;
+      zEntry.secoes.push(sec);
+      entry.zonas.set(zone.name, zEntry);
+      byBairro.set(bKey, entry);
+    }
+  }
+  return [...byBairro.values()].map((b) => ({
+    name: b.name,
+    prometidos: b.prometidos,
+    entregue: b.entregue,
+    faltante: b.faltante,
+    zonas: [...b.zonas.values()],
+  }));
 }
 
 function ReportFilters({ cabos, subcabos, filters, update, clear }) {
@@ -382,19 +448,62 @@ export default function Crossing() {
                   </div>
                   {!ranking.length ? <div className="empty">Nenhum cadastro para os filtros.</div> : ranking.map((cabo) => (
                     <div key={cabo.id} className="election-summary-cabo">
-                      <h4>Cabo: {cabo.name} <span>{count(cabo.prometidos)} promessas</span></h4>
+                      <h4>
+                        Cabo: {cabo.name}{' '}
+                        <span>
+                          {count(cabo.prometidos)} prometidos · {count(cabo.entregue)} entregue · {count(cabo.faltante)} faltante · {formatCoverage(cabo.cobertura)} cobertura
+                        </span>
+                      </h4>
                       <p>{count(cabo.secoes)} seções · {count(cabo.secoesComFaltantes)} com diferença numérica</p>
                       {cabo.cidades.map((city) => (
                         <div key={city.name} className="election-summary-city">
-                          <h5>Cidade: {city.name} <span>{count(city.prometidos)} promessas</span></h5>
+                          <h5>Cidade: {city.name} <span>{count(city.prometidos)} prometidos</span></h5>
                           {city.subcabos.map((subcabo) => (
-                            <div key={subcabo.id} className="election-summary-subcabo">
-                              <strong>Subcabo: {subcabo.name} <span>{count(subcabo.prometidos)} promessas</span></strong>
-                              {subcabo.zonas.map((zone) => (
-                                <div key={zone.name} className="election-summary-zone">
-                                  <b>Zona {zone.name}</b> <span>{count(zone.prometidos)} promessas</span>
-                                  {zone.secoes.map((section) => (
-                                    <div key={section.name} className="election-summary-section">Seção {section.name} <span>{count(section.prometidos)} promessas</span></div>
+                            <div key={subcabo.name} className="election-summary-subcabo">
+                              <strong>
+                                Subcabo: {subcabo.name}{' '}
+                                <span>
+                                  {count(subcabo.prometidos)} prometidos · {count(exclusiveSectionsOfSubcabo(cabo, subcabo))} seções exclusivas
+                                </span>
+                              </strong>
+                              {bairrosOfSubcabo(subcabo, city).map((bairro) => (
+                                <div key={bairro.name} className="election-summary-bairro">
+                                  <strong>
+                                    Bairro: {bairro.name}{' '}
+                                    <span>
+                                      {count(bairro.prometidos)} prometidos · {count(bairro.entregue)} entregue · {count(bairro.faltante)} faltante
+                                    </span>
+                                  </strong>
+                                  {bairro.zonas.map((zone) => (
+                                    <div key={zone.name} className="election-summary-zone">
+                                      <b>Zona {zone.name}</b> <span>{count(zone.prometidos)} prometidos</span>
+                                      {zone.secoes.map((section) => (
+                                        <div key={section.name} className="election-summary-section">
+                                          <div>
+                                            Zona {zone.name} · Seção {section.name}{' '}
+                                            <span>
+                                              {count(section.prometidos)} prometidos ·{' '}
+                                              {section.compartilhada
+                                                ? 'Compartilhada, sem atribuição'
+                                                : `${count(section.entregue)} entregue (TSE) · ${count(section.faltante)} faltante`}
+                                            </span>
+                                          </div>
+                                          {!section.compartilhada && section.faltante > 0 ? (
+                                            <ul className="election-summary-people">
+                                              {(section.pessoas || []).map((person, index) => (
+                                                <li key={`${person.name}-${index}`}>
+                                                  {person.name} — Voto faltante possível
+                                                </li>
+                                              ))}
+                                            </ul>
+                                          ) : (
+                                            <div className="election-summary-people-count">
+                                              {count(section.prometidos)} pessoa(s) cadastrada(s)
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
                                   ))}
                                 </div>
                               ))}
