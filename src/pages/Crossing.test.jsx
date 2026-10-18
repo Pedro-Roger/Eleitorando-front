@@ -450,7 +450,7 @@ describe('Crossing Page', () => {
     expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('subcaboId=11'));
   });
 
-  it('exibe na árvore o bairro com seus números, nomes só em seção com falta e seção compartilhada sem números de TSE', async () => {
+  it('exibe na árvore o bairro com seus números, nomes em todas as seções e seção compartilhada sem números de TSE', async () => {
     render(<Crossing />);
     fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
     const summaryHeading = await screen.findByText('Resumo por cabo e subcabo');
@@ -469,24 +469,26 @@ describe('Crossing Page', () => {
     expect(within(summarySection).getAllByText(/Bairro:\s*CENTRO/).length).toBeGreaterThan(0);
     expect(within(summarySection).getAllByText('6 prometidos · 2 entregue · 0 faltante').length).toBeGreaterThan(0);
 
-    // Seção exclusiva sem falta (0987): mostra entregue (TSE) e faltante, só a contagem de pessoas, sem nomes
+    // Seção exclusiva sem falta (0987): mostra entregue (TSE) e faltante, e lista nomes sem situação de falta
     expect(within(summarySection).getByText('2 prometidos · 2 entregue (TSE) · 0 faltante')).toBeInTheDocument();
-    expect(within(summarySection).getByText('2 pessoa(s) cadastrada(s)')).toBeInTheDocument();
-    expect(within(summarySection).queryByText(/Eleitor 1/)).not.toBeInTheDocument();
-    expect(within(summarySection).queryByText(/Eleitor 2/)).not.toBeInTheDocument();
+    expect(within(summarySection).getByText('Eleitor 1')).toBeInTheDocument();
+    expect(within(summarySection).getByText('Eleitor 2')).toBeInTheDocument();
+    expect(within(summarySection).queryByText('Eleitor 1 — Voto faltante possível')).not.toBeInTheDocument();
 
     // Seção exclusiva com falta (0533): mostra entregue (TSE) e faltante, e lista nomes com "Voto faltante possível"
     expect(within(summarySection).getByText('2 prometidos · 1 entregue (TSE) · 1 faltante')).toBeInTheDocument();
     expect(within(summarySection).getByText('Maria Silva — Voto faltante possível')).toBeInTheDocument();
     expect(within(summarySection).getByText('José Santos — Voto faltante possível')).toBeInTheDocument();
 
-    // Seção compartilhada (0999): mostra "Compartilhada, sem atribuição" no lugar dos números de TSE e não lista nomes
+    // Seção compartilhada (0999): mostra "Compartilhada, sem atribuição" no lugar dos números de TSE e lista nomes sem situação de falta
     expect(within(summarySection).getByText('3 prometidos · Compartilhada, sem atribuição')).toBeInTheDocument();
     expect(within(summarySection).getByText('1 prometidos · Compartilhada, sem atribuição')).toBeInTheDocument();
     expect(within(summarySection).queryByText(/10 entregue/)).not.toBeInTheDocument();
     expect(within(summarySection).queryByText(/4 entregue \(TSE\)/)).not.toBeInTheDocument();
-    expect(within(summarySection).queryByText(/Eleitor 3/)).not.toBeInTheDocument();
-    expect(within(summarySection).queryByText(/Pedro Comp/)).not.toBeInTheDocument();
+    expect(within(summarySection).getByText('Eleitor 3')).toBeInTheDocument();
+    expect(within(summarySection).getByText('Eleitor 4')).toBeInTheDocument();
+    expect(within(summarySection).getByText('Eleitor 5')).toBeInTheDocument();
+    expect(within(summarySection).getByText('Pedro Comp')).toBeInTheDocument();
   });
 
   it('mostra mensagem vazia quando a candidata não possui registros', async () => {

@@ -488,19 +488,15 @@ export default function Crossing() {
                                                 : `${count(section.entregue)} entregue (TSE) · ${count(section.faltante)} faltante`}
                                             </span>
                                           </div>
-                                          {!section.compartilhada && section.faltante > 0 ? (
-                                            <ul className="election-summary-people">
-                                              {(section.pessoas || []).map((person, index) => (
-                                                <li key={`${person.name}-${index}`}>
-                                                  {person.name} — Voto faltante possível
-                                                </li>
-                                              ))}
-                                            </ul>
-                                          ) : (
-                                            <div className="election-summary-people-count">
-                                              {count(section.prometidos)} pessoa(s) cadastrada(s)
-                                            </div>
-                                          )}
+                                          <ul className="election-summary-people">
+                                            {(section.pessoas || []).map((person, index) => (
+                                              <li key={`${person.name}-${index}`}>
+                                                {!section.compartilhada && section.faltante > 0
+                                                  ? `${person.name} — Voto faltante possível`
+                                                  : person.name}
+                                              </li>
+                                            ))}
+                                          </ul>
                                         </div>
                                       ))}
                                     </div>
