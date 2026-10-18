@@ -184,6 +184,20 @@
 .election-metric-missing strong,
 .election-metric-missing span { color: var(--danger); }
 
+.election-metrics.election-filter-totals {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0 0 28px;
+  padding: 0;
+  border: 0;
+}
+
+.election-metrics.election-filter-totals > div {
+  padding: 18px 20px;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius);
+  background: var(--surface-lowest);
+}
+
 .election-section h5 {
   margin-bottom: 8px;
   color: var(--text);
@@ -221,6 +235,7 @@
 @media (max-width: 760px) {
   .election-report-heading .election-download { width: 100%; }
   .election-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 24px; }
+  .election-metrics.election-filter-totals { grid-template-columns: 1fr; row-gap: 12px; }
 }
 
 @media (max-width: 480px) {

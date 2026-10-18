@@ -16,20 +16,169 @@ vi.mock('../lib/api', () => ({
   getUser: vi.fn(() => adminUser),
 }));
 
-const rows = [
-  {
-    city: 'FORTALEZA', cabo: 'Felipe', subcabo: 'Pedro', zona: '02', secao: '0533',
-    cadastrados: 2, apurado: 3, diferenca: -1, status: 'Apurado excede em 1 voto',
-  },
-  {
-    city: 'FORTALEZA', cabo: 'Felipe', subcabo: 'João', zona: '03', secao: '0987',
-    cadastrados: 4, apurado: 5, diferenca: -1, status: 'Apurado excede em 1 voto',
-  },
-  {
-    city: 'SOBRAL', cabo: 'Neudo', subcabo: '', zona: '04', secao: '0123',
-    cadastrados: 7, apurado: 7, diferenca: 0, status: 'OK',
-  },
-];
+const fullReport = {
+  candidateName: 'Keivia Dias',
+  filters: { cabo: null, subcabo: null, city: null, neighborhood: null, zone: null, section: null },
+  year: 2022,
+  office: 'DEPUTADO ESTADUAL',
+  turn: 1,
+  cabos: [
+    {
+      id: 10,
+      name: 'Felipe',
+      prometidos: 6,
+      secoes: 2,
+      secoesComFaltantes: 1,
+      subcabos: [
+        { id: 12, name: 'João', prometidos: 4 },
+        { id: 11, name: 'Pedro', prometidos: 2 },
+      ],
+      cidades: [
+        {
+          name: 'FORTALEZA',
+          prometidos: 6,
+          subcabos: [
+            {
+              id: 'JOAO',
+              name: 'João',
+              prometidos: 4,
+              zonas: [
+                {
+                  name: '03',
+                  prometidos: 4,
+                  secoes: [
+                    {
+                      name: '0987',
+                      prometidos: 4,
+                      totalPrometidoNaSecao: 4,
+                      apuracaoDisponivel: true,
+                      apuradoTseNaSecao: 5,
+                      possivelmenteVotaram: 4,
+                      faltantes: 0,
+                      percentualFaltantes: 0,
+                      pessoas: [
+                        { name: 'Eleitor 1', subcabo: 'João', subcaboId: 12, bairro: 'CENTRO', city: 'FORTALEZA', zona: '03', secao: '0987' },
+                        { name: 'Eleitor 2', subcabo: 'João', subcaboId: 12, bairro: 'CENTRO', city: 'FORTALEZA', zona: '03', secao: '0987' },
+                        { name: 'Eleitor 3', subcabo: 'João', subcaboId: 12, bairro: 'CENTRO', city: 'FORTALEZA', zona: '03', secao: '0987' },
+                        { name: 'Eleitor 4', subcabo: 'João', subcaboId: 12, bairro: 'CENTRO', city: 'FORTALEZA', zona: '03', secao: '0987' },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              id: 'PEDRO',
+              name: 'Pedro',
+              prometidos: 2,
+              zonas: [
+                {
+                  name: '02',
+                  prometidos: 2,
+                  secoes: [
+                    {
+                      name: '0533',
+                      prometidos: 2,
+                      totalPrometidoNaSecao: 2,
+                      apuracaoDisponivel: true,
+                      apuradoTseNaSecao: 1,
+                      possivelmenteVotaram: 1,
+                      faltantes: 1,
+                      percentualFaltantes: 50,
+                      pessoas: [
+                        { name: 'Maria Silva', subcabo: 'Pedro', subcaboId: 11, bairro: 'ALDEOTA', city: 'FORTALEZA', zona: '02', secao: '0533' },
+                        { name: 'José Santos', subcabo: 'Pedro', subcaboId: 11, bairro: 'ALDEOTA', city: 'FORTALEZA', zona: '02', secao: '0533' },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: 20,
+      name: 'Maria',
+      prometidos: 7,
+      secoes: 1,
+      secoesComFaltantes: 1,
+      subcabos: [
+        { id: 13, name: 'Ana', prometidos: 7 },
+      ],
+      cidades: [
+        {
+          name: 'SOBRAL',
+          prometidos: 7,
+          subcabos: [
+            {
+              id: 'ANA',
+              name: 'Ana',
+              prometidos: 7,
+              zonas: [
+                {
+                  name: '04',
+                  prometidos: 7,
+                  secoes: [
+                    {
+                      name: '0123',
+                      prometidos: 7,
+                      totalPrometidoNaSecao: 7,
+                      apuracaoDisponivel: true,
+                      apuradoTseNaSecao: 5,
+                      possivelmenteVotaram: 5,
+                      faltantes: 2,
+                      percentualFaltantes: 28.6,
+                      pessoas: Array.from({ length: 7 }, (_, i) => ({
+                        name: `Eleitor Sobral ${i + 1}`, subcabo: 'Ana', subcaboId: 13, bairro: 'CENTRO', city: 'SOBRAL', zona: '04', secao: '0123',
+                      })),
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  missingSections: [
+    {
+      cabo: 'Felipe',
+      caboId: 10,
+      city: 'FORTALEZA',
+      zona: '02',
+      secao: '0533',
+      prometidos: 2,
+      apuracaoDisponivel: true,
+      apuradoTseNaSecao: 1,
+      possivelmenteVotaram: 1,
+      faltantes: 1,
+      percentualFaltantes: 50,
+      pessoas: [
+        { name: 'Maria Silva', subcabo: 'Pedro', subcaboId: 11, bairro: 'ALDEOTA', city: 'FORTALEZA', zona: '02', secao: '0533' },
+        { name: 'José Santos', subcabo: 'Pedro', subcaboId: 11, bairro: 'ALDEOTA', city: 'FORTALEZA', zona: '02', secao: '0533' },
+      ],
+    },
+    {
+      cabo: 'Maria',
+      caboId: 20,
+      city: 'SOBRAL',
+      zona: '04',
+      secao: '0123',
+      prometidos: 7,
+      apuracaoDisponivel: true,
+      apuradoTseNaSecao: 5,
+      possivelmenteVotaram: 5,
+      faltantes: 2,
+      percentualFaltantes: 28.6,
+      pessoas: Array.from({ length: 7 }, (_, i) => ({
+        name: `Eleitor Sobral ${i + 1}`, subcabo: 'Ana', subcaboId: 13, bairro: 'CENTRO', city: 'SOBRAL', zona: '04', secao: '0123',
+      })),
+    },
+  ],
+};
 
 describe('Crossing Page', () => {
   beforeEach(() => {
@@ -38,75 +187,88 @@ describe('Crossing Page', () => {
       if (path === '/candidates') {
         return Promise.resolve({ candidates: [{ id: 1, name: 'Keivia Dias' }, { id: 2, name: 'Erika Amorim' }] });
       }
-      if (path === '/dashboard/list?type=cabos') return Promise.resolve({ items: [{ id: 10, title: 'Felipe' }, { id: 20, title: 'Maria' }] });
+      if (path === '/dashboard/list?type=cabos') {
+        return Promise.resolve({ items: [{ id: 10, title: 'Felipe' }, { id: 20, title: 'Maria' }] });
+      }
       if (path === '/dashboard/list?type=subcabos') {
-        return Promise.resolve({ items: [
-          { id: 11, title: 'Pedro', caboId: 10 },
-          { id: 12, title: 'João', caboId: 10 },
-          { id: 13, title: 'Ana', caboId: 20 },
-        ] });
+        return Promise.resolve({
+          items: [
+            { id: 11, title: 'Pedro', caboId: 10 },
+            { id: 12, title: 'João', caboId: 10 },
+            { id: 13, title: 'Ana', caboId: 20 },
+          ],
+        });
       }
-      if (path.includes('/elections/comparativo-eleitores')) {
+      if (path.includes('/elections/inteligencia-eleitoral')) {
         const parsed = new URL(path, 'http://localhost');
-        const filtered = parsed.searchParams.get('caboId') === '10'
-          ? rows.filter((row) => row.cabo === 'Felipe')
-          : parsed.searchParams.get('subcaboId') === '11'
-            ? rows.filter((row) => row.subcabo === 'Pedro')
-            : rows;
-        return Promise.resolve({ rows: filtered });
+        const caboId = parsed.searchParams.get('caboId');
+        const subcaboId = parsed.searchParams.get('subcaboId');
+        let cabos = fullReport.cabos;
+        let missingSections = fullReport.missingSections;
+        if (caboId) {
+          cabos = cabos.filter((c) => String(c.id) === caboId);
+          missingSections = missingSections.filter((m) => String(m.caboId) === caboId);
+        }
+        if (subcaboId === '11') {
+          cabos = cabos.filter((c) => c.id === 10).map((c) => ({
+            ...c,
+            prometidos: 2,
+            secoes: 1,
+            secoesComFaltantes: 1,
+            subcabos: [{ id: 11, name: 'Pedro', prometidos: 2 }],
+            cidades: c.cidades.map((city) => ({
+              ...city,
+              prometidos: 2,
+              subcabos: city.subcabos.filter((s) => s.name === 'Pedro'),
+            })),
+          }));
+          missingSections = missingSections.filter((m) => m.secao === '0533');
+        }
+        return Promise.resolve({ ...fullReport, cabos, missingSections });
       }
-      if (path.includes('/elections/relatorio-faltantes')) return Promise.resolve({
-        candidateName: 'Keivia Dias',
-        summary: [{ cabo: 'Felipe', subcabo: 'Pedro', cadastrados: 2, secoes: 1, secoesComFaltantes: 1 }],
-        missing: [{ city: 'FORTALEZA', zona: '02', secao: '0533', cadastrados: 4, apurado: 3, faltantes: 1, teams: [{ cabo: 'Felipe', subcabo: 'Pedro' }] }],
-        totalCadastrados: 6,
-        totalApurado: 12,
-        totalFaltantes: 1,
-      });
       return Promise.reject(new Error(`unexpected path: ${path}`));
     });
   });
 
-  it('exibe os agrupamentos cadastrados e o apurado TSE após escolher candidata', async () => {
+  it('exibe o quadro-resumo com o total geral ao selecionar uma candidata sem filtros', async () => {
     render(<Crossing />);
-
     fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
 
-    expect(await screen.findByText('Carregando comparação...')).toBeInTheDocument();
-    expect((await screen.findAllByRole('columnheader', { name: 'Votos cadastrados' }))[0]).toBeInTheDocument();
-    expect(screen.getAllByRole('columnheader', { name: 'Apurado TSE' })[0]).toBeInTheDocument();
-    const table = screen.getAllByRole('table')[0];
-    expect(within(table).getByText('Pedro')).toBeInTheDocument();
-    expect(within(table).getByText('0533')).toBeInTheDocument();
-    expect(within(table).getByText('2')).toBeInTheDocument();
-    expect(within(table).getByText('3')).toBeInTheDocument();
-    expect(within(table).getAllByText('OK')).toHaveLength(3);
-    expect(within(table).queryByText(/Apurado excede/)).not.toBeInTheDocument();
+    const summaryRegion = await screen.findByRole('region', { name: 'Resumo dos filtros' });
+    expect(within(summaryRegion).getByTestId('filter-total-prometidos')).toHaveTextContent('13');
+    expect(within(summaryRegion).getByTestId('filter-total-apurados')).toHaveTextContent('11');
+    expect(within(summaryRegion).getByTestId('filter-total-faltantes')).toHaveTextContent('3');
+    expect(within(summaryRegion).getByTestId('filter-total-faltantes').closest('.election-metric-missing')).toBeInTheDocument();
   });
 
-  it('filtra a tabela por subcabo e zona sem remover os demais filtros', async () => {
+  it('atualiza na hora o quadro-resumo ao escolher um cabo e um subcabo nos filtros', async () => {
     render(<Crossing />);
     fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
-    await screen.findAllByRole('columnheader', { name: 'Apurado TSE' });
+    await screen.findByText('Resumo por cabo e subcabo');
 
+    // Escolhe o Cabo Felipe (id 10): prometidos = 6, apurados = 6 (5 + 1), faltantes = 1
+    fireEvent.change(screen.getByLabelText('Cabo'), { target: { value: '10' } });
+    expect(screen.getByTestId('filter-total-prometidos')).toHaveTextContent('6');
+    expect(screen.getByTestId('filter-total-apurados')).toHaveTextContent('6');
+    expect(screen.getByTestId('filter-total-faltantes')).toHaveTextContent('1');
+
+    // Escolhe o Subcabo Pedro (id 11): prometidos = 2, apurados = 1, faltantes = 1
     fireEvent.change(screen.getByLabelText('Subcabo'), { target: { value: '11' } });
-    await waitFor(() => expect(screen.getAllByRole('table').length).toBeGreaterThan(0));
-    expect(within(screen.getAllByRole('table')[0]).getByText('Pedro')).toBeInTheDocument();
-    expect(within(screen.getAllByRole('table')[0]).queryByText('João')).not.toBeInTheDocument();
+    expect(screen.getByTestId('filter-total-prometidos')).toHaveTextContent('2');
+    expect(screen.getByTestId('filter-total-apurados')).toHaveTextContent('1');
+    expect(screen.getByTestId('filter-total-faltantes')).toHaveTextContent('1');
 
-    fireEvent.change(screen.getByLabelText('Subcabo'), { target: { value: '' } });
-    fireEvent.change(screen.getByLabelText('Zona'), { target: { value: '03' } });
-    await waitFor(() => {
-      expect(screen.getAllByRole('table').length).toBeGreaterThan(0);
-      expect(within(screen.getAllByRole('table')[0]).queryByText('Pedro')).not.toBeInTheDocument();
-      expect(within(screen.getAllByRole('table')[0]).getByText('João')).toBeInTheDocument();
-    });
+    // Escolhe o Subcabo João (id 12): prometidos = 4, apurados = 5, faltantes = 0
+    fireEvent.change(screen.getByLabelText('Subcabo'), { target: { value: '12' } });
+    expect(screen.getByTestId('filter-total-prometidos')).toHaveTextContent('4');
+    expect(screen.getByTestId('filter-total-apurados')).toHaveTextContent('5');
+    expect(screen.getByTestId('filter-total-faltantes')).toHaveTextContent('0');
   });
 
   it('mostra apenas os subcabos vinculados ao cabo selecionado', async () => {
     render(<Crossing />);
     fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
-    await screen.findAllByRole('columnheader', { name: 'Apurado TSE' });
+    await screen.findByText('Resumo por cabo e subcabo');
 
     fireEvent.change(screen.getByLabelText('Cabo'), { target: { value: '10' } });
     const subcaboFilter = screen.getByLabelText('Subcabo');
@@ -115,103 +277,37 @@ describe('Crossing Page', () => {
     expect(within(subcaboFilter).queryByRole('option', { name: 'Ana' })).not.toBeInTheDocument();
   });
 
-  it('filtra por cidade e envia cidade, zona e seção aos PDFs', async () => {
+  it('envia os filtros aplicados aos downloads de PDF', async () => {
     render(<Crossing />);
     fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
-    await screen.findAllByRole('columnheader', { name: 'Apurado TSE' });
+    await screen.findByText('Resumo por cabo e subcabo');
 
     fireEvent.change(screen.getByLabelText('Cidade'), { target: { value: 'Fortaleza' } });
     fireEvent.change(screen.getByLabelText('Zona'), { target: { value: '02' } });
     fireEvent.change(screen.getByLabelText('Seção'), { target: { value: '0533' } });
-    await waitFor(() => expect(screen.getAllByRole('table').length).toBeGreaterThan(0));
-    expect(within(screen.getAllByRole('table')[0]).getByText('FORTALEZA')).toBeInTheDocument();
-    expect(within(screen.getAllByRole('table')[0]).queryByText('SOBRAL')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'PDF possíveis não votantes (detalhado)' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Baixar PDF de possíveis não votantes' }));
+    expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('/elections/inteligencia-eleitoral/eleitores/pdf?'));
     expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('city=Fortaleza'));
     expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('zone=02'));
     expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('section=0533'));
-    fireEvent.click(screen.getByRole('button', { name: 'PDF resumo por cabo' }));
-    expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('/elections/inteligencia-eleitoral/resumo-cabos/pdf'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Baixar PDF do resumo' }));
+    expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('/elections/inteligencia-eleitoral/resumo-cabos/pdf?'));
   });
 
-  it('aplica todos os filtros também ao resumo e informa o total oficial apurado', async () => {
-    render(<Crossing />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
-    await screen.findAllByRole('columnheader', { name: 'Apurado TSE' });
-
-    fireEvent.change(screen.getByLabelText('Cidade'), { target: { value: 'Fortaleza' } });
-    fireEvent.change(screen.getByLabelText('Zona'), { target: { value: '02' } });
-    fireEvent.change(screen.getByLabelText('Seção'), { target: { value: '0533' } });
-
-    await waitFor(() => {
-      expect(api).toHaveBeenCalledWith(expect.stringMatching(/\/elections\/relatorio-faltantes\?.*city=Fortaleza.*zone=02.*section=0533/));
-    });
-    expect((await screen.findAllByText('Apurado TSE')).length).toBeGreaterThan(1);
-    expect(screen.getByText('12')).toBeInTheDocument();
-  });
-
-  it('filtra somente os cadastros do cabo selecionado e envia o cabo para a API', async () => {
-    render(<Crossing />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
-    await screen.findAllByRole('columnheader', { name: 'Apurado TSE' });
-
-    fireEvent.change(screen.getByLabelText('Cabo'), { target: { value: '10' } });
-
-    await waitFor(() => {
-      expect(api).toHaveBeenCalledWith(expect.stringContaining('caboId=10'));
-      expect(screen.getAllByRole('table').length).toBeGreaterThan(0);
-    });
-    const comparisonTable = screen.getAllByRole('table')[0];
-    expect(within(comparisonTable).getAllByText('Felipe')).not.toHaveLength(0);
-    expect(within(comparisonTable).queryByText('Neudo')).not.toBeInTheDocument();
-  });
-
-  it('mostra mensagem vazia quando a candidata não possui linhas', async () => {
+  it('mostra mensagem vazia quando a candidata não possui registros', async () => {
     api.mockImplementation((path) => {
       if (path === '/candidates') return Promise.resolve({ candidates: [{ id: 1, name: 'Keivia Dias' }] });
       if (path === '/dashboard/list?type=cabos' || path === '/dashboard/list?type=subcabos') return Promise.resolve({ items: [] });
-      if (path.includes('/elections/comparativo-eleitores')) return Promise.resolve({ rows: [] });
-      if (path.includes('/elections/relatorio-faltantes')) return Promise.resolve({ summary: [], missing: [], totalCadastrados: 0, totalApurado: 0, totalFaltantes: 0 });
+      if (path.includes('/elections/inteligencia-eleitoral')) return Promise.resolve({ cabos: [], missingSections: [] });
       return Promise.reject(new Error('unexpected path'));
     });
 
     render(<Crossing />);
     fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
 
-    await waitFor(() => expect(screen.getByText('Nenhum registro encontrado para os filtros atuais.')).toBeInTheDocument());
-  });
-
-  it('exibe o resumo por equipe e somente as zonas com votos faltantes', async () => {
-    render(<Crossing />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
-
-    expect(await screen.findByText('Resumo por cabo e subcabo')).toBeInTheDocument();
-    expect(screen.getAllByText('Faltantes').length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('columnheader', { name: 'Faltantes' }).length).toBeGreaterThan(0);
-    expect(screen.getByText('16,7% dos prometidos')).toBeInTheDocument();
-    expect(screen.getByText('Exportar relatório PDF')).toBeInTheDocument();
-  });
-
-  it('alinha os títulos numéricos com os valores do resumo por equipe', async () => {
-    render(<Crossing />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
-    expect(await screen.findByText('Resumo por cabo e subcabo')).toBeInTheDocument();
-
-    const summaryTable = screen.getAllByRole('table')[1];
-    expect(within(summaryTable).getByRole('columnheader', { name: 'Prometidos' })).toHaveStyle({ textAlign: 'right' });
-    expect(within(summaryTable).getByRole('columnheader', { name: 'Seções' })).toHaveStyle({ textAlign: 'right' });
-    expect(within(summaryTable).getByText('2')).toHaveStyle({ fontSize: '16px', textAlign: 'right' });
-    expect(within(summaryTable).getByText('2').closest('td')).toHaveStyle({ fontVariantNumeric: 'tabular-nums' });
-  });
-
-  it('exibe o relatório nominal ao clicar no botão de nomes', async () => {
-    render(<Crossing />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
-
-    fireEvent.click(await screen.findByRole('button', { name: 'Ver nomes dos eleitores' }));
-
-    expect(await screen.findByText(/Eleitores cadastrados nas seções abaixo da meta/)).toBeInTheDocument();
-    expect(api).toHaveBeenCalledWith(expect.stringContaining('/elections/relatorio-faltantes/eleitores?'));
+    expect(await screen.findByText('Nenhuma seção com diferença numérica para os filtros.')).toBeInTheDocument();
+    expect(screen.getByText('Nenhum cadastro para os filtros.')).toBeInTheDocument();
   });
 });

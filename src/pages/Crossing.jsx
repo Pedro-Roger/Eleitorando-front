@@ -6,6 +6,234 @@ import './Crossing.css';
 const count = (value) => Number(value || 0).toLocaleString('pt-BR');
 const percent = (value) => `${Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
 
+const norm = (value) => String(value ?? '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleUpperCase('pt-BR');
+const padNum = (value, width) => {
+  const n = Number.parseInt(String(value ?? '').trim(), 10);
+  return Number.isFinite(n) ? String(n).padStart(width, '0') : String(value ?? '').trim();
+};
+const locKey = (city, zone, section) => `${norm(city)}|${padNum(zone, 2)}|${padNum(section, 4)}`;
+
+function summarizeFilterTotals(report, filters, cabos, subcabos) {
+  if (!report) return { prometidos: 0, apurados: 0, faltantes: 0 };
+  const ranking = report.cabos || [];
+  const missing = report.missingSections || [];
+  const caboFilter = String(filters.caboId || '').trim();
+  const subcaboFilter = String(filters.subcaboId || '').trim();
+  const cityFilter = norm(filters.city);
+  const neighborhoodFilter = norm(filters.neighborhood);
+  const zoneFilter = String(filters.zone || '').trim();
+  const sectionFilter = String(filters.section || '').trim();
+
+  const selectedCaboTitle = caboFilter ? cabos.find((c) => String(c.id) === caboFilter)?.title : '';
+  const selectedSubcaboTitle = subcaboFilter ? subcabos.find((s) => String(s.id) === subcaboFilter)?.title : '';
+  const subFromRanking = subcaboFilter
+    ? ranking.flatMap((c) => c.subcabos || []).find((s) => String(s.id) === subcaboFilter)
+    : null;
+  const targetSubcaboName = selectedSubcaboTitle || subFromRanking?.name || (subcaboFilter ? report.filters?.subcabo : '') || '';
+
+  const matchesCabo = (caboObj) => {
+    if (!caboFilter) return true;
+    const id = caboObj.id ?? caboObj.caboId;
+    const name = caboObj.name ?? caboObj.cabo;
+    if (id !== undefined && id !== null && String(id) === caboFilter) return true;
+    if (selectedCaboTitle && norm(name) === norm(selectedCaboTitle)) return true;
+    if (ranking.length === 1 && report.filters?.cabo && norm(name) === norm(report.filters.cabo)) return true;
+    return false;
+  };
+
+  const matchesSubcabo = (subObj) => {
+    if (!subcaboFilter) return true;
+    const id = subObj.id ?? subObj.subcaboId;
+    const name = subObj.name ?? subObj.subcabo;
+    if (id !== undefined && id !== null && String(id) === subcaboFilter) return true;
+    if (targetSubcaboName && norm(name) === norm(targetSubcaboName)) return true;
+    if (Array.isArray(subObj.zonas) && subObj.zonas.some((z) => (z.secoes || []).some((s) => (s.pessoas || []).some((p) => String(p.subcaboId) === subcaboFilter)))) {
+      return true;
+    }
+    return false;
+  };
+
+  const matchesLocation = (city, zone, section, pessoas) => {
+    if (cityFilter && norm(city) !== cityFilter) return false;
+    if (zoneFilter && padNum(zone, 2) !== padNum(zoneFilter, 2)) return false;
+    if (sectionFilter && padNum(section, 4) !== padNum(sectionFilter, 4)) return false;
+    if (neighborhoodFilter && Array.isArray(pessoas) && pessoas.length > 0) {
+      if (!pessoas.some((p) => norm(p.bairro) === neighborhoodFilter)) return false;
+    }
+    return true;
+  };
+
+  const missingByCaboLoc = new Map();
+  const missingByLoc = new Map();
+  for (const ms of missing) {
+    const lKey = locKey(ms.city, ms.zona, ms.secao);
+    const cKey = `${ms.caboId ?? norm(ms.cabo)}|${lKey}`;
+    missingByCaboLoc.set(cKey, ms);
+    if (!missingByLoc.has(lKey)) missingByLoc.set(lKey, ms);
+  }
+
+  const matchedCabos = ranking.filter(matchesCabo);
+  const hasLocationFilter = Boolean(cityFilter || neighborhoodFilter || zoneFilter || sectionFilter);
+
+  if (!subcaboFilter) {
+    let prometidos = 0;
+    let apurados = 0;
+    let faltantes = 0;
+    const seenSections = new Set();
+
+    for (const cabo of matchedCabos) {
+      const caboKey = cabo.id ?? norm(cabo.name);
+      const hasDirectTotals = (cabo.apurado !== undefined || cabo.apurados !== undefined) && cabo.faltantes !== undefined && !hasLocationFilter;
+      if (hasDirectTotals) {
+        prometidos += Number(cabo.prometidos) || 0;
+        apurados += Number(cabo.apurado ?? cabo.apurados) || 0;
+        faltantes += Number(cabo.faltantes) || 0;
+        continue;
+      }
+
+      let caboPrometidosFromSections = 0;
+      let hasSectionsInHierarchy = false;
+      for (const city of cabo.cidades || []) {
+        for (const sub of city.subcabos || []) {
+          for (const zone of sub.zonas || []) {
+            for (const sec of zone.secoes || []) {
+              hasSectionsInHierarchy = true;
+              if (!matchesLocation(city.name, zone.name, sec.name, sec.pessoas)) continue;
+              const peopleCount = neighborhoodFilter && Array.isArray(sec.pessoas)
+                ? sec.pessoas.filter((p) => norm(p.bairro) === neighborhoodFilter).length
+                : (Number(sec.prometidos) || 0);
+              caboPrometidosFromSections += peopleCount;
+
+              const lKey = locKey(city.name, zone.name, sec.name);
+              const secKey = `${caboKey}|${lKey}`;
+              if (seenSections.has(secKey)) continue;
+              seenSections.add(secKey);
+
+              const ms = missingByCaboLoc.get(secKey) || missingByLoc.get(lKey);
+              const secApurado = sec.apuradoTseNaSecao !== undefined
+                ? (Number(sec.apuradoTseNaSecao) || 0)
+                : (Number(ms?.apuradoTseNaSecao ?? ms?.apurado ?? sec.apurado) || 0);
+              const secFaltantes = (sec.faltantes !== undefined && sec.faltantes !== null)
+                ? (Number(sec.faltantes) || 0)
+                : (Number(ms?.faltantes) || 0);
+              apurados += secApurado;
+              faltantes += secFaltantes;
+            }
+          }
+        }
+      }
+
+      if (!hasLocationFilter && cabo.prometidos !== undefined) {
+        prometidos += Number(cabo.prometidos) || 0;
+      } else {
+        prometidos += hasSectionsInHierarchy ? caboPrometidosFromSections : (Number(cabo.prometidos) || 0);
+      }
+    }
+
+    for (const ms of missing) {
+      if (!matchesCabo(ms)) continue;
+      if (!matchesLocation(ms.city, ms.zona, ms.secao, ms.pessoas)) continue;
+      const lKey = locKey(ms.city, ms.zona, ms.secao);
+      const secKey = `${ms.caboId ?? norm(ms.cabo)}|${lKey}`;
+      if (seenSections.has(secKey)) continue;
+      seenSections.add(secKey);
+      if (!matchedCabos.length) prometidos += Number(ms.prometidos) || 0;
+      apurados += Number(ms.apuradoTseNaSecao ?? ms.apurado) || 0;
+      faltantes += Number(ms.faltantes) || 0;
+    }
+
+    return { prometidos, apurados, faltantes };
+  }
+
+  let prometidos = 0;
+  let apurados = 0;
+  let faltantes = 0;
+  const seenSubSections = new Set();
+
+  for (const cabo of matchedCabos) {
+    const caboKey = cabo.id ?? norm(cabo.name);
+    const subEntry = (cabo.subcabos || []).find(matchesSubcabo);
+    const hasDirectSubTotals = subEntry && (subEntry.apurado !== undefined || subEntry.apurados !== undefined) && subEntry.faltantes !== undefined && !hasLocationFilter;
+    if (hasDirectSubTotals) {
+      prometidos += Number(subEntry.prometidos) || 0;
+      apurados += Number(subEntry.apurado ?? subEntry.apurados) || 0;
+      faltantes += Number(subEntry.faltantes) || 0;
+      continue;
+    }
+
+    let subPrometidosFromSections = 0;
+    let foundSubInCidades = false;
+    for (const city of cabo.cidades || []) {
+      for (const sub of city.subcabos || []) {
+        if (!matchesSubcabo(sub)) continue;
+        foundSubInCidades = true;
+        for (const zone of sub.zonas || []) {
+          for (const sec of zone.secoes || []) {
+            if (!matchesLocation(city.name, zone.name, sec.name, sec.pessoas)) continue;
+            const secProm = neighborhoodFilter && Array.isArray(sec.pessoas)
+              ? sec.pessoas.filter((p) => norm(p.bairro) === neighborhoodFilter).length
+              : (Number(sec.prometidos) || 0);
+            subPrometidosFromSections += secProm;
+
+            const lKey = locKey(city.name, zone.name, sec.name);
+            const cSecKey = `${caboKey}|${lKey}`;
+            const subSecKey = `${caboKey}|${norm(sub.name)}|${lKey}`;
+            if (seenSubSections.has(subSecKey)) continue;
+            seenSubSections.add(subSecKey);
+
+            const ms = missingByCaboLoc.get(cSecKey) || missingByLoc.get(lKey);
+            const secApurado = sec.apuradoTseNaSecao !== undefined
+              ? (Number(sec.apuradoTseNaSecao) || 0)
+              : (Number(ms?.apuradoTseNaSecao ?? ms?.apurado ?? sec.apurado) || 0);
+            let secFaltantes = 0;
+            if (sec.apuracaoDisponivel === true) {
+              secFaltantes = Math.max(0, secProm - secApurado);
+            } else if (sec.apuracaoDisponivel === false) {
+              secFaltantes = 0;
+            } else if (sec.faltantes !== undefined && sec.faltantes !== null) {
+              secFaltantes = Number(sec.faltantes) || 0;
+            } else if (ms) {
+              secFaltantes = ms.apuradoTseNaSecao !== undefined
+                ? Math.max(0, secProm - (Number(ms.apuradoTseNaSecao) || 0))
+                : (Number(ms.faltantes) || 0);
+            }
+            apurados += secApurado;
+            faltantes += secFaltantes;
+          }
+        }
+      }
+    }
+
+    if (!hasLocationFilter && subEntry?.prometidos !== undefined) {
+      prometidos += Number(subEntry.prometidos) || 0;
+    } else if (foundSubInCidades) {
+      prometidos += subPrometidosFromSections;
+    } else if (subEntry?.prometidos !== undefined) {
+      prometidos += Number(subEntry.prometidos) || 0;
+    }
+  }
+
+  for (const ms of missing) {
+    if (!matchesCabo(ms)) continue;
+    if (!matchesLocation(ms.city, ms.zona, ms.secao, ms.pessoas)) continue;
+    const matchingPeople = (ms.pessoas || []).filter(matchesSubcabo);
+    if (!matchingPeople.length) continue;
+    const lKey = locKey(ms.city, ms.zona, ms.secao);
+    const caboKey = ms.caboId ?? norm(ms.cabo);
+    const subName = matchingPeople[0]?.subcabo || targetSubcaboName;
+    const subSecKey = `${caboKey}|${norm(subName)}|${lKey}`;
+    if (seenSubSections.has(subSecKey)) continue;
+    seenSubSections.add(subSecKey);
+    const secProm = matchingPeople.length;
+    const secApurado = Number(ms.apuradoTseNaSecao ?? ms.apurado) || 0;
+    if (!prometidos) prometidos += secProm;
+    apurados += secApurado;
+    faltantes += Math.max(0, secProm - secApurado);
+  }
+
+  return { prometidos, apurados, faltantes };
+}
+
 function ReportFilters({ cabos, subcabos, filters, update, clear }) {
   const visibleSubcabos = filters.caboId
     ? subcabos.filter((subcabo) => String(subcabo.caboId) === filters.caboId)
@@ -45,6 +273,7 @@ export default function Crossing() {
   const [subcabos, setSubcabos] = useState([]);
   const [filters, setFilters] = useState({ caboId: '', subcaboId: '', city: '', neighborhood: '', zone: '', section: '' });
   const [report, setReport] = useState(null);
+  const [baseReport, setBaseReport] = useState(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -58,6 +287,13 @@ export default function Crossing() {
     }
   }, [isAdmin]);
 
+  useEffect(() => {
+    setReport(null);
+    setBaseReport(null);
+  }, [candidateName]);
+
+  const activeFilterCount = Object.values(filters).filter((value) => String(value).trim()).length;
+
   const query = useMemo(() => {
     const params = new URLSearchParams({ candidateName });
     for (const [name, value] of Object.entries(filters)) {
@@ -67,16 +303,21 @@ export default function Crossing() {
   }, [candidateName, filters]);
 
   useEffect(() => {
-    if (!candidateName) { setReport(null); return; }
+    if (!candidateName) { setReport(null); setBaseReport(null); return; }
     let active = true;
     setLoading(true);
     setError('');
     api(`/elections/inteligencia-eleitoral${query}`)
-      .then((data) => { if (active) setReport(data); })
+      .then((data) => {
+        if (!active) return;
+        setReport(data);
+        if (!activeFilterCount) setBaseReport(data);
+        else setBaseReport((prev) => prev || data);
+      })
       .catch((e) => { if (active) { setReport(null); setError(e.message || 'Não foi possível carregar os relatórios.'); } })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [candidateName, query]);
+  }, [candidateName, query, activeFilterCount]);
 
   function updateFilter(name, value) {
     setFilters((current) => ({
@@ -90,9 +331,17 @@ export default function Crossing() {
     catch (e) { setError(e.message || 'Não foi possível gerar o PDF.'); }
   }
 
+  const summarySource = baseReport || report;
+  const totals = useMemo(() => {
+    const fromCurrent = !loading && report ? summarizeFilterTotals(report, filters, cabos, subcabos) : null;
+    if (fromCurrent && (fromCurrent.prometidos > 0 || fromCurrent.apurados > 0 || fromCurrent.faltantes > 0 || !baseReport)) {
+      return fromCurrent;
+    }
+    return summarizeFilterTotals(summarySource, filters, cabos, subcabos);
+  }, [report, baseReport, summarySource, loading, filters, cabos, subcabos]);
+
   const missing = report?.missingSections || [];
   const ranking = report?.cabos || [];
-  const activeFilterCount = Object.values(filters).filter((value) => String(value).trim()).length;
   return (
     <>
       <AppHeader title="Inteligência Eleitoral" subtitle="Dois relatórios por cabo" />
@@ -117,6 +366,22 @@ export default function Crossing() {
               <ReportFilters cabos={cabos} subcabos={subcabos} filters={filters} update={updateFilter}
                 clear={() => setFilters({ caboId: '', subcaboId: '', city: '', neighborhood: '', zone: '', section: '' })} />
             </div>
+            {summarySource && (
+              <div className="election-metrics election-filter-totals" role="region" aria-label="Resumo dos filtros">
+                <div>
+                  <strong data-testid="filter-total-prometidos">{count(totals.prometidos)}</strong>
+                  <span>Prometidos</span>
+                </div>
+                <div>
+                  <strong data-testid="filter-total-apurados">{count(totals.apurados)}</strong>
+                  <span>Apurados</span>
+                </div>
+                <div className="election-metric-missing">
+                  <strong data-testid="filter-total-faltantes">{count(totals.faltantes)}</strong>
+                  <span>Faltantes</span>
+                </div>
+              </div>
+            )}
             {error && <div className="alert error">{error}</div>}
             {loading ? <div className="empty">Carregando relatórios...</div> : report && (
               <div className="election-report-stack">
