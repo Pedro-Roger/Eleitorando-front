@@ -426,10 +426,12 @@ describe('Crossing Page', () => {
     const btnGeral = screen.getByRole('button', { name: 'Baixar relatório geral' });
     const btnCabo = screen.getByRole('button', { name: 'Baixar relatório por cabo' });
     const btnSubcabo = screen.getByRole('button', { name: 'Baixar relatório por subcabo' });
+    const btnVotoUnico = screen.getByRole('button', { name: 'Baixar relatório de seções com um voto' });
 
     expect(btnGeral).toBeEnabled();
     expect(btnCabo).toBeDisabled();
     expect(btnSubcabo).toBeDisabled();
+    expect(btnVotoUnico).toBeEnabled();
     expect(screen.getByText(/Selecione um cabo nos filtros para habilitar o relatório por cabo/)).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Cidade'), { target: { value: 'Fortaleza' } });
@@ -437,6 +439,10 @@ describe('Crossing Page', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Baixar relatório geral' }));
     expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('/elections/inteligencia-eleitoral/relatorio-geral/pdf?'));
+    expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('city=Fortaleza'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Baixar relatório de seções com um voto' }));
+    expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('/elections/inteligencia-eleitoral/voto-unico/pdf?'));
     expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('city=Fortaleza'));
 
     fireEvent.change(screen.getByLabelText('Cabo'), { target: { value: '10' } });
@@ -455,7 +461,7 @@ describe('Crossing Page', () => {
     expect(apiDownload).toHaveBeenCalledWith(expect.stringContaining('subcaboId=11'));
   });
 
-  it('exibe na árvore o bairro com seus números, nomes em todas as seções e seção compartilhada sem números de TSE', async () => {
+  it('exibe na árvore o bairro com seus números, nomes em todas as seções e seção compartilhada com Prometeu N, votos apurados e situação', async () => {
     render(<Crossing />);
     fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
     const summaryHeading = await screen.findByText('Resumo por cabo e subcabo');
@@ -485,15 +491,96 @@ describe('Crossing Page', () => {
     expect(within(summarySection).getByText('Maria Silva — Voto faltante possível')).toBeInTheDocument();
     expect(within(summarySection).getByText('José Santos — Voto faltante possível')).toBeInTheDocument();
 
-    // Seção compartilhada (0999): mostra "Compartilhada, sem atribuição" no lugar dos números de TSE e lista nomes sem situação de falta
-    expect(within(summarySection).getByText('3 prometidos · Compartilhada, sem atribuição')).toBeInTheDocument();
-    expect(within(summarySection).getByText('1 prometidos · Compartilhada, sem atribuição')).toBeInTheDocument();
-    expect(within(summarySection).queryByText(/10 entregue/)).not.toBeInTheDocument();
+    // Seção compartilhada (0999, T=10): mostra "Prometeu N · Votos apurados na seção: T · Apurado", sem entregue/faltante do subcabo
+    expect(within(summarySection).getByText('Prometeu 3 · Votos apurados na seção: 10 · Apurado')).toBeInTheDocument();
+    expect(within(summarySection).getByText('Prometeu 1 · Votos apurados na seção: 10 · Apurado')).toBeInTheDocument();
+    expect(within(summarySection).queryByText(/Compartilhada, sem atribuição/)).not.toBeInTheDocument();
     expect(within(summarySection).queryByText(/4 entregue \(TSE\)/)).not.toBeInTheDocument();
     expect(within(summarySection).getByText('Eleitor 3')).toBeInTheDocument();
     expect(within(summarySection).getByText('Eleitor 4')).toBeInTheDocument();
     expect(within(summarySection).getByText('Eleitor 5')).toBeInTheDocument();
     expect(within(summarySection).getByText('Pedro Comp')).toBeInTheDocument();
+  });
+
+  it('exibe Não apurado (T=0) e Sem apuração TSE nas seções compartilhadas quando aplicável', async () => {
+    const customReport = {
+      ...fullReport,
+      cabos: [
+        {
+          id: 10,
+          name: 'Felipe',
+          prometidos: 3,
+          entregue: 0,
+          faltante: 2,
+          excedente: 0,
+          compartilhadas: 2,
+          prometidosCompartilhados: 0,
+          prometidosSemApuracao: 1,
+          cobertura: 0,
+          secoes: 2,
+          secoesComFaltantes: 1,
+          subcabos: [{ id: 12, name: 'João', prometidos: 3, secoes: 2, compartilhadas: 2 }],
+          cidades: [
+            {
+              name: 'FORTALEZA',
+              prometidos: 3,
+              entregue: 0,
+              faltante: 2,
+              bairros: [{ name: 'CENTRO', prometidos: 3, entregue: 0, faltante: 2 }],
+              subcabos: [
+                {
+                  id: 12,
+                  name: 'João',
+                  prometidos: 3,
+                  zonas: [
+                    {
+                      name: '03',
+                      prometidos: 3,
+                      secoes: [
+                        {
+                          name: '0100',
+                          prometidos: 2,
+                          apuracaoDisponivel: true,
+                          apuradoTseNaSecao: 0,
+                          entregue: null,
+                          faltante: null,
+                          compartilhada: true,
+                          pessoas: [{ name: 'Eleitor Zero', bairro: 'CENTRO' }],
+                        },
+                        {
+                          name: '0200',
+                          prometidos: 1,
+                          apuracaoDisponivel: false,
+                          apuradoTseNaSecao: 0,
+                          entregue: null,
+                          faltante: null,
+                          compartilhada: true,
+                          pessoas: [{ name: 'Eleitor SemTse', bairro: 'CENTRO' }],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    api.mockImplementation((path) => {
+      if (path === '/candidates') return Promise.resolve({ candidates: [{ id: 1, name: 'Keivia Dias' }] });
+      if (path === '/dashboard/list?type=cabos' || path === '/dashboard/list?type=subcabos') return Promise.resolve({ items: [] });
+      if (path.includes('/elections/inteligencia-eleitoral')) return Promise.resolve(customReport);
+      return Promise.reject(new Error('unexpected path'));
+    });
+
+    render(<Crossing />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
+    const summaryHeading = await screen.findByText('Resumo por cabo e subcabo');
+    const summarySection = summaryHeading.closest('section');
+
+    expect(within(summarySection).getByText('Prometeu 2 · Votos apurados na seção: 0 · Não apurado')).toBeInTheDocument();
+    expect(within(summarySection).getByText('Prometeu 1 · Sem apuração TSE')).toBeInTheDocument();
   });
 
   it('mostra mensagem vazia quando a candidata não possui registros', async () => {

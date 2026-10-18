@@ -226,6 +226,17 @@ function bairrosOfSubcabo(subcabo, city) {
   }));
 }
 
+function formatSharedSectionSummary(section) {
+  const n = count(section.prometidos);
+  const hasTse = section.apuracaoDisponivel !== false && section.apuradoTseNaSecao !== null && section.apuradoTseNaSecao !== undefined;
+  if (!hasTse) {
+    return `Prometeu ${n} · Sem apuração TSE`;
+  }
+  const t = Number(section.apuradoTseNaSecao) || 0;
+  const situacao = t >= 1 ? 'Apurado' : 'Não apurado';
+  return `Prometeu ${n} · Votos apurados na seção: ${count(t)} · ${situacao}`;
+}
+
 function ReportFilters({ cabos, subcabos, filters, update, clear }) {
   const visibleSubcabos = filters.caboId
     ? subcabos.filter((subcabo) => String(subcabo.caboId) === filters.caboId)
@@ -461,6 +472,9 @@ export default function Crossing() {
                       <button className="election-download secondary" type="button" disabled={!filters.subcaboId} onClick={() => download('relatorio-subcabo')}>
                         Baixar relatório por subcabo
                       </button>
+                      <button className="election-download secondary" type="button" onClick={() => download('voto-unico')}>
+                        Baixar relatório de seções com um voto
+                      </button>
                     </div>
                   </div>
                   {!ranking.length ? <div className="empty">Nenhum cadastro para os filtros.</div> : ranking.map((cabo) => (
@@ -499,10 +513,9 @@ export default function Crossing() {
                                           <div>
                                             Zona {zone.name} · Seção {section.name}{' '}
                                             <span>
-                                              {count(section.prometidos)} prometidos ·{' '}
                                               {section.compartilhada
-                                                ? 'Compartilhada, sem atribuição'
-                                                : `${count(section.entregue)} entregue (TSE) · ${count(section.faltante)} faltante`}
+                                                ? formatSharedSectionSummary(section)
+                                                : `${count(section.prometidos)} prometidos · ${count(section.entregue)} entregue (TSE) · ${count(section.faltante)} faltante`}
                                             </span>
                                           </div>
                                           <ul className="election-summary-people">
