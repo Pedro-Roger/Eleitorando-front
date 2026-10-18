@@ -22,45 +22,116 @@ const fullReport = {
   year: 2022,
   office: 'DEPUTADO ESTADUAL',
   turn: 1,
+  prometidos: 15,
+  entregue: 8,
+  faltante: 3,
+  excedente: 2,
+  compartilhadas: 1,
+  prometidosCompartilhados: 4,
+  prometidosSemApuracao: 0,
+  cobertura: 8 / 15,
   cabos: [
     {
       id: 10,
       name: 'Felipe',
-      prometidos: 6,
+      prometidos: 8,
+      entregue: 3,
+      faltante: 1,
+      excedente: 2,
+      compartilhadas: 1,
+      prometidosCompartilhados: 4,
+      prometidosSemApuracao: 0,
+      cobertura: 0.375,
       secoes: 2,
       secoesComFaltantes: 1,
       subcabos: [
-        { id: 12, name: 'João', prometidos: 4 },
-        { id: 11, name: 'Pedro', prometidos: 2 },
+        { id: 12, name: 'João', prometidos: 5, secoes: 2, compartilhadas: 1, secoesExclusivas: 1 },
+        { id: 11, name: 'Pedro', prometidos: 3, secoes: 2, compartilhadas: 1, secoesExclusivas: 1 },
       ],
       cidades: [
         {
           name: 'FORTALEZA',
-          prometidos: 6,
+          prometidos: 8,
+          entregue: 3,
+          faltante: 1,
+          excedente: 2,
+          compartilhadas: 1,
+          prometidosCompartilhados: 4,
+          prometidosSemApuracao: 0,
+          cobertura: 0.375,
+          bairros: [
+            {
+              name: 'ALDEOTA',
+              bairro: 'ALDEOTA',
+              prometidos: 2,
+              entregue: 1,
+              faltante: 1,
+              excedente: 0,
+              compartilhadas: 0,
+              prometidosCompartilhados: 0,
+              prometidosSemApuracao: 0,
+              cobertura: 0.5,
+            },
+            {
+              name: 'CENTRO',
+              bairro: 'CENTRO',
+              prometidos: 6,
+              entregue: 2,
+              faltante: 0,
+              excedente: 2,
+              compartilhadas: 1,
+              prometidosCompartilhados: 4,
+              prometidosSemApuracao: 0,
+              cobertura: 2 / 6,
+            },
+          ],
           subcabos: [
             {
-              id: 'JOAO',
+              id: 12,
               name: 'João',
-              prometidos: 4,
+              prometidos: 5,
               zonas: [
                 {
                   name: '03',
-                  prometidos: 4,
+                  prometidos: 5,
                   secoes: [
                     {
                       name: '0987',
-                      prometidos: 4,
-                      totalPrometidoNaSecao: 4,
+                      prometidos: 2,
+                      totalPrometidoNaSecao: 2,
                       apuracaoDisponivel: true,
-                      apuradoTseNaSecao: 5,
-                      possivelmenteVotaram: 4,
+                      apuradoTseNaSecao: 4,
+                      entregue: 2,
+                      faltante: 0,
+                      excedente: 2,
+                      compartilhada: false,
+                      cobertura: 1,
+                      possivelmenteVotaram: 2,
                       faltantes: 0,
                       percentualFaltantes: 0,
                       pessoas: [
                         { name: 'Eleitor 1', subcabo: 'João', subcaboId: 12, bairro: 'CENTRO', city: 'FORTALEZA', zona: '03', secao: '0987' },
                         { name: 'Eleitor 2', subcabo: 'João', subcaboId: 12, bairro: 'CENTRO', city: 'FORTALEZA', zona: '03', secao: '0987' },
-                        { name: 'Eleitor 3', subcabo: 'João', subcaboId: 12, bairro: 'CENTRO', city: 'FORTALEZA', zona: '03', secao: '0987' },
-                        { name: 'Eleitor 4', subcabo: 'João', subcaboId: 12, bairro: 'CENTRO', city: 'FORTALEZA', zona: '03', secao: '0987' },
+                      ],
+                    },
+                    {
+                      name: '0999',
+                      prometidos: 3,
+                      totalPrometidoNaSecao: 4,
+                      apuracaoDisponivel: true,
+                      apuradoTseNaSecao: 10,
+                      entregue: 4,
+                      faltante: 0,
+                      excedente: 6,
+                      compartilhada: true,
+                      cobertura: 1,
+                      possivelmenteVotaram: 4,
+                      faltantes: 0,
+                      percentualFaltantes: 0,
+                      pessoas: [
+                        { name: 'Eleitor 3', subcabo: 'João', subcaboId: 12, bairro: 'CENTRO', city: 'FORTALEZA', zona: '03', secao: '0999' },
+                        { name: 'Eleitor 4', subcabo: 'João', subcaboId: 12, bairro: 'CENTRO', city: 'FORTALEZA', zona: '03', secao: '0999' },
+                        { name: 'Eleitor 5', subcabo: 'João', subcaboId: 12, bairro: 'CENTRO', city: 'FORTALEZA', zona: '03', secao: '0999' },
                       ],
                     },
                   ],
@@ -68,9 +139,9 @@ const fullReport = {
               ],
             },
             {
-              id: 'PEDRO',
+              id: 11,
               name: 'Pedro',
-              prometidos: 2,
+              prometidos: 3,
               zonas: [
                 {
                   name: '02',
@@ -82,12 +153,41 @@ const fullReport = {
                       totalPrometidoNaSecao: 2,
                       apuracaoDisponivel: true,
                       apuradoTseNaSecao: 1,
+                      entregue: 1,
+                      faltante: 1,
+                      excedente: 0,
+                      compartilhada: false,
+                      cobertura: 0.5,
                       possivelmenteVotaram: 1,
                       faltantes: 1,
                       percentualFaltantes: 50,
                       pessoas: [
                         { name: 'Maria Silva', subcabo: 'Pedro', subcaboId: 11, bairro: 'ALDEOTA', city: 'FORTALEZA', zona: '02', secao: '0533' },
                         { name: 'José Santos', subcabo: 'Pedro', subcaboId: 11, bairro: 'ALDEOTA', city: 'FORTALEZA', zona: '02', secao: '0533' },
+                      ],
+                    },
+                  ],
+                },
+                {
+                  name: '03',
+                  prometidos: 1,
+                  secoes: [
+                    {
+                      name: '0999',
+                      prometidos: 1,
+                      totalPrometidoNaSecao: 4,
+                      apuracaoDisponivel: true,
+                      apuradoTseNaSecao: 10,
+                      entregue: 4,
+                      faltante: 0,
+                      excedente: 6,
+                      compartilhada: true,
+                      cobertura: 1,
+                      possivelmenteVotaram: 4,
+                      faltantes: 0,
+                      percentualFaltantes: 0,
+                      pessoas: [
+                        { name: 'Pedro Comp', subcabo: 'Pedro', subcaboId: 11, bairro: 'CENTRO', city: 'FORTALEZA', zona: '03', secao: '0999' },
                       ],
                     },
                   ],
@@ -102,18 +202,46 @@ const fullReport = {
       id: 20,
       name: 'Maria',
       prometidos: 7,
+      entregue: 5,
+      faltante: 2,
+      excedente: 0,
+      compartilhadas: 0,
+      prometidosCompartilhados: 0,
+      prometidosSemApuracao: 0,
+      cobertura: 5 / 7,
       secoes: 1,
       secoesComFaltantes: 1,
       subcabos: [
-        { id: 13, name: 'Ana', prometidos: 7 },
+        { id: 13, name: 'Ana', prometidos: 7, secoes: 1, compartilhadas: 0, secoesExclusivas: 1 },
       ],
       cidades: [
         {
           name: 'SOBRAL',
           prometidos: 7,
+          entregue: 5,
+          faltante: 2,
+          excedente: 0,
+          compartilhadas: 0,
+          prometidosCompartilhados: 0,
+          prometidosSemApuracao: 0,
+          cobertura: 5 / 7,
+          bairros: [
+            {
+              name: 'DOM EXPEDITO',
+              bairro: 'DOM EXPEDITO',
+              prometidos: 7,
+              entregue: 5,
+              faltante: 2,
+              excedente: 0,
+              compartilhadas: 0,
+              prometidosCompartilhados: 0,
+              prometidosSemApuracao: 0,
+              cobertura: 5 / 7,
+            },
+          ],
           subcabos: [
             {
-              id: 'ANA',
+              id: 13,
               name: 'Ana',
               prometidos: 7,
               zonas: [
@@ -127,11 +255,16 @@ const fullReport = {
                       totalPrometidoNaSecao: 7,
                       apuracaoDisponivel: true,
                       apuradoTseNaSecao: 5,
+                      entregue: 5,
+                      faltante: 2,
+                      excedente: 0,
+                      compartilhada: false,
+                      cobertura: 5 / 7,
                       possivelmenteVotaram: 5,
                       faltantes: 2,
                       percentualFaltantes: 28.6,
                       pessoas: Array.from({ length: 7 }, (_, i) => ({
-                        name: `Eleitor Sobral ${i + 1}`, subcabo: 'Ana', subcaboId: 13, bairro: 'CENTRO', city: 'SOBRAL', zona: '04', secao: '0123',
+                        name: `Eleitor Sobral ${i + 1}`, subcabo: 'Ana', subcaboId: 13, bairro: 'DOM EXPEDITO', city: 'SOBRAL', zona: '04', secao: '0123',
                       })),
                     },
                   ],
@@ -153,6 +286,11 @@ const fullReport = {
       prometidos: 2,
       apuracaoDisponivel: true,
       apuradoTseNaSecao: 1,
+      entregue: 1,
+      faltante: 1,
+      excedente: 0,
+      compartilhada: false,
+      cobertura: 0.5,
       possivelmenteVotaram: 1,
       faltantes: 1,
       percentualFaltantes: 50,
@@ -170,11 +308,16 @@ const fullReport = {
       prometidos: 7,
       apuracaoDisponivel: true,
       apuradoTseNaSecao: 5,
+      entregue: 5,
+      faltante: 2,
+      excedente: 0,
+      compartilhada: false,
+      cobertura: 5 / 7,
       possivelmenteVotaram: 5,
       faltantes: 2,
       percentualFaltantes: 28.6,
       pessoas: Array.from({ length: 7 }, (_, i) => ({
-        name: `Eleitor Sobral ${i + 1}`, subcabo: 'Ana', subcaboId: 13, bairro: 'CENTRO', city: 'SOBRAL', zona: '04', secao: '0123',
+        name: `Eleitor Sobral ${i + 1}`, subcabo: 'Ana', subcaboId: 13, bairro: 'DOM EXPEDITO', city: 'SOBRAL', zona: '04', secao: '0123',
       })),
     },
   ],
@@ -200,69 +343,76 @@ describe('Crossing Page', () => {
         });
       }
       if (path.includes('/elections/inteligencia-eleitoral')) {
-        const parsed = new URL(path, 'http://localhost');
-        const caboId = parsed.searchParams.get('caboId');
-        const subcaboId = parsed.searchParams.get('subcaboId');
-        let cabos = fullReport.cabos;
-        let missingSections = fullReport.missingSections;
-        if (caboId) {
-          cabos = cabos.filter((c) => String(c.id) === caboId);
-          missingSections = missingSections.filter((m) => String(m.caboId) === caboId);
-        }
-        if (subcaboId === '11') {
-          cabos = cabos.filter((c) => c.id === 10).map((c) => ({
-            ...c,
-            prometidos: 2,
-            secoes: 1,
-            secoesComFaltantes: 1,
-            subcabos: [{ id: 11, name: 'Pedro', prometidos: 2 }],
-            cidades: c.cidades.map((city) => ({
-              ...city,
-              prometidos: 2,
-              subcabos: city.subcabos.filter((s) => s.name === 'Pedro'),
-            })),
-          }));
-          missingSections = missingSections.filter((m) => m.secao === '0533');
-        }
-        return Promise.resolve({ ...fullReport, cabos, missingSections });
+        return Promise.resolve(fullReport);
       }
       return Promise.reject(new Error(`unexpected path: ${path}`));
     });
   });
 
-  it('exibe o quadro-resumo com o total geral ao selecionar uma candidata sem filtros', async () => {
+  it('exibe os cartões com prometidos, entregue, faltante e cobertura do payload geral', async () => {
     render(<Crossing />);
     fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
 
     const summaryRegion = await screen.findByRole('region', { name: 'Resumo dos filtros' });
-    expect(within(summaryRegion).getByTestId('filter-total-prometidos')).toHaveTextContent('13');
-    expect(within(summaryRegion).getByTestId('filter-total-apurados')).toHaveTextContent('11');
+    expect(within(summaryRegion).getByTestId('filter-total-prometidos')).toHaveTextContent('15');
+    expect(within(summaryRegion).getByTestId('filter-total-entregue')).toHaveTextContent('8');
     expect(within(summaryRegion).getByTestId('filter-total-faltantes')).toHaveTextContent('3');
+    expect(within(summaryRegion).getByTestId('filter-total-cobertura')).toHaveTextContent('53,3%');
     expect(within(summaryRegion).getByTestId('filter-total-faltantes').closest('.election-metric-missing')).toBeInTheDocument();
   });
 
-  it('atualiza na hora o quadro-resumo ao escolher um cabo e um subcabo nos filtros', async () => {
+  it('lê entregue, faltante, prometidos e cobertura do cabo sem recalcular no front', async () => {
     render(<Crossing />);
     fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
     await screen.findByText('Resumo por cabo e subcabo');
 
-    // Escolhe o Cabo Felipe (id 10): prometidos = 6, apurados = 6 (5 + 1), faltantes = 1
+    // Cabo Felipe (id 10): prometidos = 8, entregue = 3 (seção compartilhada não entra), faltante = 1, cobertura = 37,5%
     fireEvent.change(screen.getByLabelText('Cabo'), { target: { value: '10' } });
-    expect(screen.getByTestId('filter-total-prometidos')).toHaveTextContent('6');
-    expect(screen.getByTestId('filter-total-apurados')).toHaveTextContent('6');
-    expect(screen.getByTestId('filter-total-faltantes')).toHaveTextContent('1');
+    const summaryRegion = screen.getByRole('region', { name: 'Resumo dos filtros' });
+    expect(within(summaryRegion).getByTestId('filter-total-prometidos')).toHaveTextContent('8');
+    expect(within(summaryRegion).getByTestId('filter-total-entregue')).toHaveTextContent('3');
+    expect(within(summaryRegion).getByTestId('filter-total-faltantes')).toHaveTextContent('1');
+    expect(within(summaryRegion).getByTestId('filter-total-cobertura')).toHaveTextContent('37,5%');
+  });
 
-    // Escolhe o Subcabo Pedro (id 11): prometidos = 2, apurados = 1, faltantes = 1
+  it('mostra apenas prometidos e seções exclusivas no filtro de subcabo, sem entregue', async () => {
+    render(<Crossing />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
+    await screen.findByText('Resumo por cabo e subcabo');
+
+    fireEvent.change(screen.getByLabelText('Cabo'), { target: { value: '10' } });
     fireEvent.change(screen.getByLabelText('Subcabo'), { target: { value: '11' } });
-    expect(screen.getByTestId('filter-total-prometidos')).toHaveTextContent('2');
-    expect(screen.getByTestId('filter-total-apurados')).toHaveTextContent('1');
-    expect(screen.getByTestId('filter-total-faltantes')).toHaveTextContent('1');
 
-    // Escolhe o Subcabo João (id 12): prometidos = 4, apurados = 5, faltantes = 0
+    const summaryRegion = screen.getByRole('region', { name: 'Resumo dos filtros' });
+    expect(within(summaryRegion).getByTestId('filter-total-prometidos')).toHaveTextContent('3');
+    expect(within(summaryRegion).getByTestId('filter-total-secoes-exclusivas')).toHaveTextContent('1');
+    expect(within(summaryRegion).queryByTestId('filter-total-entregue')).not.toBeInTheDocument();
+    expect(within(summaryRegion).queryByTestId('filter-total-faltantes')).not.toBeInTheDocument();
+
+    // Troca para Subcabo João (id 12) na hora, sem clique
     fireEvent.change(screen.getByLabelText('Subcabo'), { target: { value: '12' } });
-    expect(screen.getByTestId('filter-total-prometidos')).toHaveTextContent('4');
-    expect(screen.getByTestId('filter-total-apurados')).toHaveTextContent('5');
-    expect(screen.getByTestId('filter-total-faltantes')).toHaveTextContent('0');
+    expect(within(summaryRegion).getByTestId('filter-total-prometidos')).toHaveTextContent('5');
+    expect(within(summaryRegion).getByTestId('filter-total-secoes-exclusivas')).toHaveTextContent('1');
+  });
+
+  it('lê entregue, faltante, prometidos e cobertura do payload ao filtrar por cidade e bairro', async () => {
+    render(<Crossing />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
+    await screen.findByText('Resumo por cabo e subcabo');
+
+    fireEvent.change(screen.getByLabelText('Cidade'), { target: { value: 'Sobral' } });
+    const summaryRegion = screen.getByRole('region', { name: 'Resumo dos filtros' });
+    expect(within(summaryRegion).getByTestId('filter-total-prometidos')).toHaveTextContent('7');
+    expect(within(summaryRegion).getByTestId('filter-total-entregue')).toHaveTextContent('5');
+    expect(within(summaryRegion).getByTestId('filter-total-faltantes')).toHaveTextContent('2');
+    expect(within(summaryRegion).getByTestId('filter-total-cobertura')).toHaveTextContent('71,4%');
+
+    fireEvent.change(screen.getByLabelText('Cidade'), { target: { value: 'Fortaleza' } });
+    fireEvent.change(screen.getByLabelText('Bairro'), { target: { value: 'Aldeota' } });
+    expect(within(summaryRegion).getByTestId('filter-total-prometidos')).toHaveTextContent('2');
+    expect(within(summaryRegion).getByTestId('filter-total-entregue')).toHaveTextContent('1');
+    expect(within(summaryRegion).getByTestId('filter-total-faltantes')).toHaveTextContent('1');
+    expect(within(summaryRegion).getByTestId('filter-total-cobertura')).toHaveTextContent('50,0%');
   });
 
   it('mostra apenas os subcabos vinculados ao cabo selecionado', async () => {

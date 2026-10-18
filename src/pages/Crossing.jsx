@@ -5,6 +5,10 @@ import './Crossing.css';
 
 const count = (value) => Number(value || 0).toLocaleString('pt-BR');
 const percent = (value) => `${Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
+const formatCoverage = (value) => {
+  const num = Number(value || 0);
+  return percent(num <= 1 ? num * 100 : num);
+};
 
 const norm = (value) => String(value ?? '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleUpperCase('pt-BR');
 const padNum = (value, width) => {
@@ -13,12 +17,43 @@ const padNum = (value, width) => {
 };
 const locKey = (city, zone, section) => `${norm(city)}|${padNum(zone, 2)}|${padNum(section, 4)}`;
 
+function combineMetrics(items) {
+  if (!items || !items.length) {
+    return { mode: 'default', prometidos: 0, entregue: 0, faltante: 0, cobertura: 0 };
+  }
+  if (items.length === 1) {
+    const item = items[0];
+    const prometidos = Number(item.prometidos) || 0;
+    const entregue = Number(item.entregue ?? item.votos ?? item.possivelmenteVotaram) || 0;
+    const faltante = Number(item.faltante ?? item.faltantes) || 0;
+    const cobertura = item.cobertura !== undefined
+      ? Number(item.cobertura) || 0
+      : (prometidos > 0 ? entregue / prometidos : 0);
+    return { mode: 'default', prometidos, entregue, faltante, cobertura };
+  }
+  let prometidos = 0;
+  let entregue = 0;
+  let faltante = 0;
+  for (const item of items) {
+    prometidos += Number(item.prometidos) || 0;
+    if (item.compartilhada) continue;
+    entregue += Number(item.entregue ?? item.votos ?? item.possivelmenteVotaram) || 0;
+    faltante += Number(item.faltante ?? item.faltantes) || 0;
+  }
+  const cobertura = prometidos > 0 ? entregue / prometidos : 0;
+  return { mode: 'default', prometidos, entregue, faltante, cobertura };
+}
+
 function summarizeFilterTotals(report, filters, cabos, subcabos) {
-  if (!report) return { prometidos: 0, apurados: 0, faltantes: 0 };
-  const ranking = report.cabos || [];
-  const missing = report.missingSections || [];
   const caboFilter = String(filters.caboId || '').trim();
   const subcaboFilter = String(filters.subcaboId || '').trim();
+  if (!report) {
+    return subcaboFilter
+      ? { mode: 'subcabo', prometidos: 0, secoesExclusivas: 0 }
+      : { mode: 'default', prometidos: 0, entregue: 0, faltante: 0, cobertura: 0 };
+  }
+
+  const ranking = report.cabos || [];
   const cityFilter = norm(filters.city);
   const neighborhoodFilter = norm(filters.neighborhood);
   const zoneFilter = String(filters.zone || '').trim();
@@ -47,191 +82,141 @@ function summarizeFilterTotals(report, filters, cabos, subcabos) {
     const name = subObj.name ?? subObj.subcabo;
     if (id !== undefined && id !== null && String(id) === subcaboFilter) return true;
     if (targetSubcaboName && norm(name) === norm(targetSubcaboName)) return true;
-    if (Array.isArray(subObj.zonas) && subObj.zonas.some((z) => (z.secoes || []).some((s) => (s.pessoas || []).some((p) => String(p.subcaboId) === subcaboFilter)))) {
-      return true;
-    }
     return false;
   };
-
-  const matchesLocation = (city, zone, section, pessoas) => {
-    if (cityFilter && norm(city) !== cityFilter) return false;
-    if (zoneFilter && padNum(zone, 2) !== padNum(zoneFilter, 2)) return false;
-    if (sectionFilter && padNum(section, 4) !== padNum(sectionFilter, 4)) return false;
-    if (neighborhoodFilter && Array.isArray(pessoas) && pessoas.length > 0) {
-      if (!pessoas.some((p) => norm(p.bairro) === neighborhoodFilter)) return false;
-    }
-    return true;
-  };
-
-  const missingByCaboLoc = new Map();
-  const missingByLoc = new Map();
-  for (const ms of missing) {
-    const lKey = locKey(ms.city, ms.zona, ms.secao);
-    const cKey = `${ms.caboId ?? norm(ms.cabo)}|${lKey}`;
-    missingByCaboLoc.set(cKey, ms);
-    if (!missingByLoc.has(lKey)) missingByLoc.set(lKey, ms);
-  }
 
   const matchedCabos = ranking.filter(matchesCabo);
   const hasLocationFilter = Boolean(cityFilter || neighborhoodFilter || zoneFilter || sectionFilter);
 
-  if (!subcaboFilter) {
+  if (subcaboFilter) {
     let prometidos = 0;
-    let apurados = 0;
-    let faltantes = 0;
-    const seenSections = new Set();
+    let secoesExclusivas = 0;
+    const seenExclusive = new Set();
 
     for (const cabo of matchedCabos) {
-      const caboKey = cabo.id ?? norm(cabo.name);
-      const hasDirectTotals = (cabo.apurado !== undefined || cabo.apurados !== undefined) && cabo.faltantes !== undefined && !hasLocationFilter;
-      if (hasDirectTotals) {
-        prometidos += Number(cabo.prometidos) || 0;
-        apurados += Number(cabo.apurado ?? cabo.apurados) || 0;
-        faltantes += Number(cabo.faltantes) || 0;
-        continue;
+      const caboKey = cabo.id ?? norm(cabo.name ?? cabo.cabo);
+      const subEntry = (cabo.subcabos || []).find(matchesSubcabo);
+
+      if (!hasLocationFilter && subEntry) {
+        prometidos += Number(subEntry.prometidos) || 0;
+        if (subEntry.secoesExclusivas !== undefined) {
+          secoesExclusivas += Number(subEntry.secoesExclusivas) || 0;
+          continue;
+        }
+        if (typeof subEntry.secoes === 'number' && (subEntry.compartilhadas !== undefined || subEntry.secoesCompartilhadas !== undefined)) {
+          secoesExclusivas += Math.max(0, subEntry.secoes - (Number(subEntry.compartilhadas ?? subEntry.secoesCompartilhadas) || 0));
+          continue;
+        }
       }
 
-      let caboPrometidosFromSections = 0;
-      let hasSectionsInHierarchy = false;
       for (const city of cabo.cidades || []) {
+        if (cityFilter && norm(city.name ?? city.city) !== cityFilter) continue;
+        for (const sub of city.subcabos || []) {
+          if (!matchesSubcabo(sub)) continue;
+          for (const zone of sub.zonas || []) {
+            if (zoneFilter && padNum(zone.name ?? zone.zona, 2) !== padNum(zoneFilter, 2)) continue;
+            for (const sec of zone.secoes || []) {
+              if (sectionFilter && padNum(sec.name ?? sec.secao, 4) !== padNum(sectionFilter, 4)) continue;
+              if (neighborhoodFilter && Array.isArray(sec.pessoas) && !sec.pessoas.some((p) => norm(p.bairro) === neighborhoodFilter)) {
+                continue;
+              }
+              if (hasLocationFilter || !subEntry) {
+                prometidos += Number(sec.prometidos) || 0;
+              }
+              const secKey = `${caboKey}|${locKey(city.name ?? city.city, zone.name ?? zone.zona, sec.name ?? sec.secao)}`;
+              if (!sec.compartilhada && !seenExclusive.has(secKey)) {
+                seenExclusive.add(secKey);
+                secoesExclusivas += 1;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return { mode: 'subcabo', prometidos, secoesExclusivas };
+  }
+
+  if (sectionFilter || zoneFilter) {
+    const matchedSections = [];
+    const seen = new Set();
+    for (const cabo of matchedCabos) {
+      const caboKey = cabo.id ?? norm(cabo.name ?? cabo.cabo);
+      for (const city of cabo.cidades || []) {
+        const cityName = city.name ?? city.city;
+        if (cityFilter && norm(cityName) !== cityFilter) continue;
         for (const sub of city.subcabos || []) {
           for (const zone of sub.zonas || []) {
+            const zoneName = zone.name ?? zone.zona;
+            if (zoneFilter && padNum(zoneName, 2) !== padNum(zoneFilter, 2)) continue;
             for (const sec of zone.secoes || []) {
-              hasSectionsInHierarchy = true;
-              if (!matchesLocation(city.name, zone.name, sec.name, sec.pessoas)) continue;
-              const peopleCount = neighborhoodFilter && Array.isArray(sec.pessoas)
-                ? sec.pessoas.filter((p) => norm(p.bairro) === neighborhoodFilter).length
-                : (Number(sec.prometidos) || 0);
-              caboPrometidosFromSections += peopleCount;
-
-              const lKey = locKey(city.name, zone.name, sec.name);
-              const secKey = `${caboKey}|${lKey}`;
-              if (seenSections.has(secKey)) continue;
-              seenSections.add(secKey);
-
-              const ms = missingByCaboLoc.get(secKey) || missingByLoc.get(lKey);
-              const secApurado = sec.apuradoTseNaSecao !== undefined
-                ? (Number(sec.apuradoTseNaSecao) || 0)
-                : (Number(ms?.apuradoTseNaSecao ?? ms?.apurado ?? sec.apurado) || 0);
-              const secFaltantes = (sec.faltantes !== undefined && sec.faltantes !== null)
-                ? (Number(sec.faltantes) || 0)
-                : (Number(ms?.faltantes) || 0);
-              apurados += secApurado;
-              faltantes += secFaltantes;
+              const secName = sec.name ?? sec.secao;
+              if (sectionFilter && padNum(secName, 4) !== padNum(sectionFilter, 4)) continue;
+              if (neighborhoodFilter && Array.isArray(sec.pessoas) && !sec.pessoas.some((p) => norm(p.bairro) === neighborhoodFilter)) {
+                continue;
+              }
+              const secKey = `${caboKey}|${locKey(cityName, zoneName, secName)}`;
+              if (seen.has(secKey)) continue;
+              seen.add(secKey);
+              matchedSections.push({
+                ...sec,
+                prometidos: Number(sec.totalPrometidoNaSecao ?? sec.prometidos) || 0,
+              });
             }
           }
         }
       }
-
-      if (!hasLocationFilter && cabo.prometidos !== undefined) {
-        prometidos += Number(cabo.prometidos) || 0;
-      } else {
-        prometidos += hasSectionsInHierarchy ? caboPrometidosFromSections : (Number(cabo.prometidos) || 0);
-      }
     }
-
-    for (const ms of missing) {
-      if (!matchesCabo(ms)) continue;
-      if (!matchesLocation(ms.city, ms.zona, ms.secao, ms.pessoas)) continue;
-      const lKey = locKey(ms.city, ms.zona, ms.secao);
-      const secKey = `${ms.caboId ?? norm(ms.cabo)}|${lKey}`;
-      if (seenSections.has(secKey)) continue;
-      seenSections.add(secKey);
-      if (!matchedCabos.length) prometidos += Number(ms.prometidos) || 0;
-      apurados += Number(ms.apuradoTseNaSecao ?? ms.apurado) || 0;
-      faltantes += Number(ms.faltantes) || 0;
-    }
-
-    return { prometidos, apurados, faltantes };
+    return combineMetrics(matchedSections);
   }
 
-  let prometidos = 0;
-  let apurados = 0;
-  let faltantes = 0;
-  const seenSubSections = new Set();
-
-  for (const cabo of matchedCabos) {
-    const caboKey = cabo.id ?? norm(cabo.name);
-    const subEntry = (cabo.subcabos || []).find(matchesSubcabo);
-    const hasDirectSubTotals = subEntry && (subEntry.apurado !== undefined || subEntry.apurados !== undefined) && subEntry.faltantes !== undefined && !hasLocationFilter;
-    if (hasDirectSubTotals) {
-      prometidos += Number(subEntry.prometidos) || 0;
-      apurados += Number(subEntry.apurado ?? subEntry.apurados) || 0;
-      faltantes += Number(subEntry.faltantes) || 0;
-      continue;
+  if (neighborhoodFilter) {
+    if (!caboFilter && Array.isArray(report.cidades)) {
+      const bairros = report.cidades
+        .filter((c) => !cityFilter || norm(c.name ?? c.city) === cityFilter)
+        .flatMap((c) => c.bairros || [])
+        .filter((b) => norm(b.name ?? b.bairro) === neighborhoodFilter);
+      if (bairros.length) return combineMetrics(bairros);
     }
-
-    let subPrometidosFromSections = 0;
-    let foundSubInCidades = false;
-    for (const city of cabo.cidades || []) {
-      for (const sub of city.subcabos || []) {
-        if (!matchesSubcabo(sub)) continue;
-        foundSubInCidades = true;
-        for (const zone of sub.zonas || []) {
-          for (const sec of zone.secoes || []) {
-            if (!matchesLocation(city.name, zone.name, sec.name, sec.pessoas)) continue;
-            const secProm = neighborhoodFilter && Array.isArray(sec.pessoas)
-              ? sec.pessoas.filter((p) => norm(p.bairro) === neighborhoodFilter).length
-              : (Number(sec.prometidos) || 0);
-            subPrometidosFromSections += secProm;
-
-            const lKey = locKey(city.name, zone.name, sec.name);
-            const cSecKey = `${caboKey}|${lKey}`;
-            const subSecKey = `${caboKey}|${norm(sub.name)}|${lKey}`;
-            if (seenSubSections.has(subSecKey)) continue;
-            seenSubSections.add(subSecKey);
-
-            const ms = missingByCaboLoc.get(cSecKey) || missingByLoc.get(lKey);
-            const secApurado = sec.apuradoTseNaSecao !== undefined
-              ? (Number(sec.apuradoTseNaSecao) || 0)
-              : (Number(ms?.apuradoTseNaSecao ?? ms?.apurado ?? sec.apurado) || 0);
-            let secFaltantes = 0;
-            if (sec.apuracaoDisponivel === true) {
-              secFaltantes = Math.max(0, secProm - secApurado);
-            } else if (sec.apuracaoDisponivel === false) {
-              secFaltantes = 0;
-            } else if (sec.faltantes !== undefined && sec.faltantes !== null) {
-              secFaltantes = Number(sec.faltantes) || 0;
-            } else if (ms) {
-              secFaltantes = ms.apuradoTseNaSecao !== undefined
-                ? Math.max(0, secProm - (Number(ms.apuradoTseNaSecao) || 0))
-                : (Number(ms.faltantes) || 0);
-            }
-            apurados += secApurado;
-            faltantes += secFaltantes;
+    const bairros = [];
+    for (const cabo of matchedCabos) {
+      for (const city of cabo.cidades || []) {
+        if (cityFilter && norm(city.name ?? city.city) !== cityFilter) continue;
+        for (const bairro of city.bairros || []) {
+          if (norm(bairro.name ?? bairro.bairro) === neighborhoodFilter) {
+            bairros.push(bairro);
           }
         }
       }
+      for (const bairro of cabo.bairros || []) {
+        if (norm(bairro.name ?? bairro.bairro) === neighborhoodFilter) {
+          bairros.push(bairro);
+        }
+      }
     }
-
-    if (!hasLocationFilter && subEntry?.prometidos !== undefined) {
-      prometidos += Number(subEntry.prometidos) || 0;
-    } else if (foundSubInCidades) {
-      prometidos += subPrometidosFromSections;
-    } else if (subEntry?.prometidos !== undefined) {
-      prometidos += Number(subEntry.prometidos) || 0;
-    }
+    return combineMetrics(bairros);
   }
 
-  for (const ms of missing) {
-    if (!matchesCabo(ms)) continue;
-    if (!matchesLocation(ms.city, ms.zona, ms.secao, ms.pessoas)) continue;
-    const matchingPeople = (ms.pessoas || []).filter(matchesSubcabo);
-    if (!matchingPeople.length) continue;
-    const lKey = locKey(ms.city, ms.zona, ms.secao);
-    const caboKey = ms.caboId ?? norm(ms.cabo);
-    const subName = matchingPeople[0]?.subcabo || targetSubcaboName;
-    const subSecKey = `${caboKey}|${norm(subName)}|${lKey}`;
-    if (seenSubSections.has(subSecKey)) continue;
-    seenSubSections.add(subSecKey);
-    const secProm = matchingPeople.length;
-    const secApurado = Number(ms.apuradoTseNaSecao ?? ms.apurado) || 0;
-    if (!prometidos) prometidos += secProm;
-    apurados += secApurado;
-    faltantes += Math.max(0, secProm - secApurado);
+  if (cityFilter) {
+    if (!caboFilter && Array.isArray(report.cidades)) {
+      const cities = report.cidades.filter((c) => norm(c.name ?? c.city) === cityFilter);
+      if (cities.length) return combineMetrics(cities);
+    }
+    const cities = matchedCabos.flatMap((cabo) => (cabo.cidades || []).filter((c) => norm(c.name ?? c.city) === cityFilter));
+    return combineMetrics(cities);
   }
 
-  return { prometidos, apurados, faltantes };
+  if (caboFilter) {
+    return combineMetrics(matchedCabos);
+  }
+
+  if (report.totals && (report.totals.entregue !== undefined || report.totals.prometidos !== undefined)) {
+    return combineMetrics([report.totals]);
+  }
+  if (report.entregue !== undefined || report.prometidos !== undefined) {
+    return combineMetrics([report]);
+  }
+  return combineMetrics(ranking);
 }
 
 function ReportFilters({ cabos, subcabos, filters, update, clear }) {
@@ -334,7 +319,7 @@ export default function Crossing() {
   const summarySource = baseReport || report;
   const totals = useMemo(() => {
     const fromCurrent = !loading && report ? summarizeFilterTotals(report, filters, cabos, subcabos) : null;
-    if (fromCurrent && (fromCurrent.prometidos > 0 || fromCurrent.apurados > 0 || fromCurrent.faltantes > 0 || !baseReport)) {
+    if (fromCurrent && (fromCurrent.prometidos > 0 || fromCurrent.entregue > 0 || fromCurrent.faltante > 0 || fromCurrent.secoesExclusivas > 0 || !baseReport)) {
       return fromCurrent;
     }
     return summarizeFilterTotals(summarySource, filters, cabos, subcabos);
@@ -368,18 +353,37 @@ export default function Crossing() {
             </div>
             {summarySource && (
               <div className="election-metrics election-filter-totals" role="region" aria-label="Resumo dos filtros">
-                <div>
-                  <strong data-testid="filter-total-prometidos">{count(totals.prometidos)}</strong>
-                  <span>Prometidos</span>
-                </div>
-                <div>
-                  <strong data-testid="filter-total-apurados">{count(totals.apurados)}</strong>
-                  <span>Apurados</span>
-                </div>
-                <div className="election-metric-missing">
-                  <strong data-testid="filter-total-faltantes">{count(totals.faltantes)}</strong>
-                  <span>Faltantes</span>
-                </div>
+                {totals.mode === 'subcabo' ? (
+                  <>
+                    <div>
+                      <strong data-testid="filter-total-prometidos">{count(totals.prometidos)}</strong>
+                      <span>Prometidos</span>
+                    </div>
+                    <div>
+                      <strong data-testid="filter-total-secoes-exclusivas">{count(totals.secoesExclusivas)}</strong>
+                      <span>Seções exclusivas</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <strong data-testid="filter-total-prometidos">{count(totals.prometidos)}</strong>
+                      <span>Prometidos</span>
+                    </div>
+                    <div>
+                      <strong data-testid="filter-total-entregue">{count(totals.entregue)}</strong>
+                      <span>Entregues</span>
+                    </div>
+                    <div className="election-metric-missing">
+                      <strong data-testid="filter-total-faltantes">{count(totals.faltante)}</strong>
+                      <span>Faltantes</span>
+                    </div>
+                    <div>
+                      <strong data-testid="filter-total-cobertura">{formatCoverage(totals.cobertura)}</strong>
+                      <span>Cobertura</span>
+                    </div>
+                  </>
+                )}
               </div>
             )}
             {error && <div className="alert error">{error}</div>}
@@ -403,8 +407,8 @@ export default function Crossing() {
                       <div className="election-metrics">
                         <div><strong>{count(section.prometidos)}</strong><span>Prometeram</span></div>
                         <div><strong>{count(section.apuradoTseNaSecao)}</strong><span>Resultado na seção</span></div>
-                        <div><strong>{count(section.possivelmenteVotaram)}</strong><span>Possivelmente votaram</span></div>
-                        <div className="election-metric-missing"><strong>{count(section.faltantes)}</strong><span>Possíveis faltantes · {percent(section.percentualFaltantes)}</span></div>
+                        <div><strong>{count(section.entregue ?? section.possivelmenteVotaram)}</strong><span>Possivelmente votaram</span></div>
+                        <div className="election-metric-missing"><strong>{count(section.faltante ?? section.faltantes)}</strong><span>Possíveis faltantes · {percent(section.percentualFaltantes)}</span></div>
                       </div>
                       <h5>Pessoas cadastradas nesta seção</h5>
                       {section.pessoas.map((person, index) => (
