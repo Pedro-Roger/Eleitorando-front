@@ -25,11 +25,10 @@ const fullReport = {
   totais: {
     prometidos: 15,
     entregue: 11,
-    faltante: 3,
+    faltante: 4,
     excedente: 8,
     prometidosCompartilhados: 0,
-    prometidosSemApuracao: 1,
-    cobertura: 11 / 15,
+    quebra: 4 / 15,
   },
   cabos: [
     {
@@ -41,8 +40,7 @@ const fullReport = {
       excedente: 8,
       compartilhadas: 1,
       prometidosCompartilhados: 0,
-      prometidosSemApuracao: 0,
-      cobertura: 7 / 8,
+      quebra: 1 / 8,
       secoes: 3,
       secoesComFaltantes: 1,
       subcabos: [
@@ -58,8 +56,7 @@ const fullReport = {
           excedente: 2,
           compartilhadas: 1,
           prometidosCompartilhados: 4,
-          prometidosSemApuracao: 0,
-          cobertura: 0.375,
+          quebra: 1 / 8,
           bairros: [
             {
               name: 'ALDEOTA',
@@ -69,8 +66,7 @@ const fullReport = {
               excedente: 0,
               compartilhadas: 0,
               prometidosCompartilhados: 0,
-              prometidosSemApuracao: 0,
-              cobertura: 0.5,
+              quebra: 0.5,
             },
             {
               name: 'CENTRO',
@@ -80,8 +76,7 @@ const fullReport = {
               excedente: 2,
               compartilhadas: 1,
               prometidosCompartilhados: 4,
-              prometidosSemApuracao: 0,
-              cobertura: 2 / 6,
+              quebra: 0,
             },
           ],
           subcabos: [
@@ -104,7 +99,7 @@ const fullReport = {
                       faltante: 0,
                       excedente: 2,
                       compartilhada: false,
-                      cobertura: 1,
+                      quebra: 0,
                       percentualFaltantes: 0,
                       pessoas: [
                         { name: 'Eleitor 1', subcabo: 'João', subcaboId: 12, bairro: 'CENTRO', city: 'FORTALEZA', zona: '03', secao: '0987' },
@@ -121,7 +116,7 @@ const fullReport = {
                       faltante: 0,
                       excedente: 6,
                       compartilhada: true,
-                      cobertura: 1,
+                      quebra: 0,
                       percentualFaltantes: 0,
                       pessoas: [
                         { name: 'Eleitor 3', subcabo: 'João', subcaboId: 12, bairro: 'CENTRO', city: 'FORTALEZA', zona: '03', secao: '0999' },
@@ -152,7 +147,7 @@ const fullReport = {
                       faltante: 1,
                       excedente: 0,
                       compartilhada: false,
-                      cobertura: 0.5,
+                      quebra: 0.5,
                       percentualFaltantes: 50,
                       pessoas: [
                         { name: 'Maria Silva', subcabo: 'Pedro', subcaboId: 11, bairro: 'ALDEOTA', city: 'FORTALEZA', zona: '02', secao: '0533' },
@@ -175,7 +170,7 @@ const fullReport = {
                       faltante: 0,
                       excedente: 6,
                       compartilhada: true,
-                      cobertura: 1,
+                      quebra: 0,
                       percentualFaltantes: 0,
                       pessoas: [
                         { name: 'Pedro Comp', subcabo: 'Pedro', subcaboId: 11, bairro: 'CENTRO', city: 'FORTALEZA', zona: '03', secao: '0999' },
@@ -198,8 +193,7 @@ const fullReport = {
       excedente: 0,
       compartilhadas: 0,
       prometidosCompartilhados: 0,
-      prometidosSemApuracao: 0,
-      cobertura: 5 / 7,
+      quebra: 2 / 7,
       secoes: 1,
       secoesComFaltantes: 1,
       subcabos: [
@@ -214,8 +208,7 @@ const fullReport = {
           excedente: 0,
           compartilhadas: 0,
           prometidosCompartilhados: 0,
-          prometidosSemApuracao: 0,
-          cobertura: 5 / 7,
+          quebra: 2 / 7,
           bairros: [
             {
               name: 'DOM EXPEDITO',
@@ -225,8 +218,7 @@ const fullReport = {
               excedente: 0,
               compartilhadas: 0,
               prometidosCompartilhados: 0,
-              prometidosSemApuracao: 0,
-              cobertura: 5 / 7,
+              quebra: 2 / 7,
             },
           ],
           subcabos: [
@@ -249,7 +241,7 @@ const fullReport = {
                       faltante: 2,
                       excedente: 0,
                       compartilhada: false,
-                      cobertura: 5 / 7,
+                      quebra: 2 / 7,
                       percentualFaltantes: 28.6,
                       pessoas: Array.from({ length: 7 }, (_, i) => ({
                         name: `Eleitor Sobral ${i + 1}`, subcabo: 'Ana', subcaboId: 13, bairro: 'DOM EXPEDITO', city: 'SOBRAL', zona: '04', secao: '0123',
@@ -278,7 +270,7 @@ const fullReport = {
       faltante: 1,
       excedente: 0,
       compartilhada: false,
-      cobertura: 0.5,
+      quebra: 0.5,
       percentualFaltantes: 50,
       pessoas: [
         { name: 'Maria Silva', subcabo: 'Pedro', subcaboId: 11, bairro: 'ALDEOTA', city: 'FORTALEZA', zona: '02', secao: '0533' },
@@ -298,7 +290,7 @@ const fullReport = {
       faltante: 2,
       excedente: 0,
       compartilhada: false,
-      cobertura: 5 / 7,
+      quebra: 2 / 7,
       percentualFaltantes: 28.6,
       pessoas: Array.from({ length: 7 }, (_, i) => ({
         name: `Eleitor Sobral ${i + 1}`, subcabo: 'Ana', subcaboId: 13, bairro: 'DOM EXPEDITO', city: 'SOBRAL', zona: '04', secao: '0123',
@@ -333,37 +325,37 @@ describe('Crossing Page', () => {
     });
   });
 
-  it('exibe os cartões lendo report.totais sem somar cabos, incluindo Sem apuração TSE, e os rótulos da seção', async () => {
+  it('exibe os cartões lendo report.totais sem somar cabos, com % de quebra e sem Sem apuração TSE', async () => {
     render(<Crossing />);
     fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
 
     const summaryRegion = await screen.findByRole('region', { name: 'Resumo dos filtros' });
-    // Lê report.totais (15 prometidos, 11 entregue, 3 faltante, 1 sem apuração => 11 + 3 + 1 = 15), sem somar cabos (7 + 5 = 12 entregue)
+    // Lê report.totais (15 prometidos, 11 entregue, 4 faltante => quebra 4/15 = 26,7%), sem somar cabos (7 + 5 = 12 entregue)
     expect(within(summaryRegion).getByTestId('filter-total-prometidos')).toHaveTextContent('15');
     expect(within(summaryRegion).getByTestId('filter-total-entregue')).toHaveTextContent('11');
-    expect(within(summaryRegion).getByTestId('filter-total-faltantes')).toHaveTextContent('3');
-    expect(within(summaryRegion).getByTestId('filter-total-sem-apuracao')).toHaveTextContent('1');
-    expect(within(summaryRegion).getByText('Sem apuração TSE')).toBeInTheDocument();
-    expect(within(summaryRegion).getByTestId('filter-total-cobertura')).toHaveTextContent('73,3%');
+    expect(within(summaryRegion).getByTestId('filter-total-faltantes')).toHaveTextContent('4');
+    expect(within(summaryRegion).getByTestId('filter-total-quebra')).toHaveTextContent('26,7%');
+    expect(within(summaryRegion).getByText('% de quebra')).toBeInTheDocument();
+    expect(within(summaryRegion).queryByText(/Sem apuração TSE/i)).not.toBeInTheDocument();
+    expect(within(summaryRegion).queryByText(/Cobertura/i)).not.toBeInTheDocument();
     expect(within(summaryRegion).getByTestId('filter-total-faltantes').closest('.election-metric-missing')).toBeInTheDocument();
 
     expect((await screen.findAllByText('Entregue (TSE)')).length).toBeGreaterThan(0);
     expect(screen.getByText('Faltante · 50,0%')).toBeInTheDocument();
   });
 
-  it('lê entregue, faltante, sem apuração, prometidos e cobertura do cabo sem recalcular no front', async () => {
+  it('lê entregue, faltante, prometidos e % de quebra do cabo sem recalcular no front', async () => {
     render(<Crossing />);
     fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
     await screen.findByText('Resumo por cabo e subcabo');
 
-    // Cabo Felipe (id 10): prometidos = 8, entregue = 7 (conta a seção inteira do cabo), faltante = 1, sem apuração = 0, cobertura = 87,5%
+    // Cabo Felipe (id 10): prometidos = 8, entregue = 7, faltante = 1, quebra = 12,5%
     fireEvent.change(screen.getByLabelText('Cabo'), { target: { value: '10' } });
     const summaryRegion = screen.getByRole('region', { name: 'Resumo dos filtros' });
     expect(within(summaryRegion).getByTestId('filter-total-prometidos')).toHaveTextContent('8');
     expect(within(summaryRegion).getByTestId('filter-total-entregue')).toHaveTextContent('7');
     expect(within(summaryRegion).getByTestId('filter-total-faltantes')).toHaveTextContent('1');
-    expect(within(summaryRegion).getByTestId('filter-total-sem-apuracao')).toHaveTextContent('0');
-    expect(within(summaryRegion).getByTestId('filter-total-cobertura')).toHaveTextContent('87,5%');
+    expect(within(summaryRegion).getByTestId('filter-total-quebra')).toHaveTextContent('12,5%');
   });
 
   it('mostra apenas prometidos e seções exclusivas no filtro de subcabo, sem entregue', async () => {
@@ -386,7 +378,7 @@ describe('Crossing Page', () => {
     expect(within(summaryRegion).getByTestId('filter-total-secoes-exclusivas')).toHaveTextContent('1');
   });
 
-  it('lê entregue, faltante, prometidos e cobertura do payload ao filtrar por cidade e bairro', async () => {
+  it('lê entregue, faltante, prometidos e % de quebra do payload ao filtrar por cidade e bairro', async () => {
     render(<Crossing />);
     fireEvent.click(await screen.findByRole('button', { name: 'Keivia Dias' }));
     await screen.findByText('Resumo por cabo e subcabo');
@@ -396,14 +388,14 @@ describe('Crossing Page', () => {
     expect(within(summaryRegion).getByTestId('filter-total-prometidos')).toHaveTextContent('7');
     expect(within(summaryRegion).getByTestId('filter-total-entregue')).toHaveTextContent('5');
     expect(within(summaryRegion).getByTestId('filter-total-faltantes')).toHaveTextContent('2');
-    expect(within(summaryRegion).getByTestId('filter-total-cobertura')).toHaveTextContent('71,4%');
+    expect(within(summaryRegion).getByTestId('filter-total-quebra')).toHaveTextContent('28,6%');
 
     fireEvent.change(screen.getByLabelText('Cidade'), { target: { value: 'Fortaleza' } });
     fireEvent.change(screen.getByLabelText('Bairro'), { target: { value: 'Aldeota' } });
     expect(within(summaryRegion).getByTestId('filter-total-prometidos')).toHaveTextContent('2');
     expect(within(summaryRegion).getByTestId('filter-total-entregue')).toHaveTextContent('1');
     expect(within(summaryRegion).getByTestId('filter-total-faltantes')).toHaveTextContent('1');
-    expect(within(summaryRegion).getByTestId('filter-total-cobertura')).toHaveTextContent('50,0%');
+    expect(within(summaryRegion).getByTestId('filter-total-quebra')).toHaveTextContent('50,0%');
   });
 
   it('mostra apenas os subcabos vinculados ao cabo selecionado', async () => {
@@ -467,8 +459,8 @@ describe('Crossing Page', () => {
     const summaryHeading = await screen.findByText('Resumo por cabo e subcabo');
     const summarySection = summaryHeading.closest('section');
 
-    // Cabo com prometidos, entregue, faltante e cobertura do payload
-    expect(within(summarySection).getByText('8 prometidos · 7 entregue · 1 faltante · 87,5% cobertura')).toBeInTheDocument();
+    // Cabo com prometidos, entregue, faltante e % de quebra do payload
+    expect(within(summarySection).getByText('8 prometidos · 7 entregue · 1 faltante · 12,5% de quebra')).toBeInTheDocument();
 
     // Subcabo com prometidos e seções exclusivas (sem entregue/faltante)
     expect(within(summarySection).getByText('5 prometidos · 1 seções exclusivas')).toBeInTheDocument();
@@ -502,7 +494,7 @@ describe('Crossing Page', () => {
     expect(within(summarySection).getByText('Pedro Comp')).toBeInTheDocument();
   });
 
-  it('exibe Não apurado (T=0) e Sem apuração TSE nas seções compartilhadas quando aplicável', async () => {
+  it('exibe Não apurado (T=0) nas seções compartilhadas e trata seção sem apuração TSE como faltante normal', async () => {
     const customReport = {
       ...fullReport,
       cabos: [
@@ -511,22 +503,21 @@ describe('Crossing Page', () => {
           name: 'Felipe',
           prometidos: 3,
           entregue: 0,
-          faltante: 2,
+          faltante: 3,
           excedente: 0,
-          compartilhadas: 2,
+          compartilhadas: 1,
           prometidosCompartilhados: 0,
-          prometidosSemApuracao: 1,
-          cobertura: 0,
+          quebra: 1,
           secoes: 2,
-          secoesComFaltantes: 1,
-          subcabos: [{ id: 12, name: 'João', prometidos: 3, secoes: 2, compartilhadas: 2 }],
+          secoesComFaltantes: 2,
+          subcabos: [{ id: 12, name: 'João', prometidos: 3, secoes: 2, compartilhadas: 1 }],
           cidades: [
             {
               name: 'FORTALEZA',
               prometidos: 3,
               entregue: 0,
-              faltante: 2,
-              bairros: [{ name: 'CENTRO', prometidos: 3, entregue: 0, faltante: 2 }],
+              faltante: 3,
+              bairros: [{ name: 'CENTRO', prometidos: 3, entregue: 0, faltante: 3, quebra: 1 }],
               subcabos: [
                 {
                   id: 12,
@@ -552,9 +543,9 @@ describe('Crossing Page', () => {
                           prometidos: 1,
                           apuracaoDisponivel: false,
                           apuradoTseNaSecao: 0,
-                          entregue: null,
-                          faltante: null,
-                          compartilhada: true,
+                          entregue: 0,
+                          faltante: 1,
+                          compartilhada: false,
                           pessoas: [{ name: 'Eleitor SemTse', bairro: 'CENTRO' }],
                         },
                       ],
@@ -580,7 +571,9 @@ describe('Crossing Page', () => {
     const summarySection = summaryHeading.closest('section');
 
     expect(within(summarySection).getByText('Prometeu 2 · Votos apurados na seção: 0 · Não apurado')).toBeInTheDocument();
-    expect(within(summarySection).getByText('Prometeu 1 · Sem apuração TSE')).toBeInTheDocument();
+    expect(within(summarySection).getByText('1 prometidos · 0 entregue (TSE) · 1 faltante')).toBeInTheDocument();
+    expect(within(summarySection).getByText('Eleitor SemTse — Voto faltante possível')).toBeInTheDocument();
+    expect(within(summarySection).queryByText(/Sem apuração TSE/i)).not.toBeInTheDocument();
   });
 
   it('mostra mensagem vazia quando a candidata não possui registros', async () => {

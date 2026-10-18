@@ -5,7 +5,7 @@ import './Crossing.css';
 
 const count = (value) => Number(value || 0).toLocaleString('pt-BR');
 const percent = (value) => `${Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
-const formatCoverage = (value) => {
+const formatQuebra = (value) => {
   const num = Number(value || 0);
   return percent(num <= 1 ? num * 100 : num);
 };
@@ -19,36 +19,29 @@ const locKey = (city, zone, section) => `${norm(city)}|${padNum(zone, 2)}|${padN
 
 function combineMetrics(items = []) {
   if (!items.length) {
-    return { mode: 'default', prometidos: 0, entregue: 0, faltante: 0, prometidosSemApuracao: 0, cobertura: 0 };
+    return { mode: 'default', prometidos: 0, entregue: 0, faltante: 0, quebra: 0 };
   }
   if (items.length === 1) {
     const item = items[0];
     const prometidos = Number(item.prometidos) || 0;
     const entregue = Number(item.entregue) || 0;
     const faltante = Number(item.faltante) || 0;
-    const prometidosSemApuracao = Number(item.prometidosSemApuracao) || 0;
-    const cobertura = item.cobertura !== undefined
-      ? Number(item.cobertura) || 0
-      : (prometidos > 0 ? entregue / prometidos : 0);
-    return { mode: 'default', prometidos, entregue, faltante, prometidosSemApuracao, cobertura };
+    const quebra = item.quebra !== undefined
+      ? Number(item.quebra) || 0
+      : (prometidos > 0 ? faltante / prometidos : 0);
+    return { mode: 'default', prometidos, entregue, faltante, quebra };
   }
   let prometidos = 0;
   let entregue = 0;
   let faltante = 0;
-  let prometidosSemApuracao = 0;
   for (const item of items) {
     prometidos += Number(item.prometidos) || 0;
     if (item.compartilhada) continue;
-    if (item.apuracaoDisponivel === false) {
-      prometidosSemApuracao += Number(item.prometidos) || 0;
-      continue;
-    }
     entregue += Number(item.entregue) || 0;
     faltante += Number(item.faltante) || 0;
-    prometidosSemApuracao += Number(item.prometidosSemApuracao) || 0;
   }
-  const cobertura = prometidos > 0 ? entregue / prometidos : 0;
-  return { mode: 'default', prometidos, entregue, faltante, prometidosSemApuracao, cobertura };
+  const quebra = prometidos > 0 ? faltante / prometidos : 0;
+  return { mode: 'default', prometidos, entregue, faltante, quebra };
 }
 
 function summarizeFilterTotals(report, filters, cabos, subcabos) {
@@ -57,7 +50,7 @@ function summarizeFilterTotals(report, filters, cabos, subcabos) {
   if (!report) {
     return subcaboFilter
       ? { mode: 'subcabo', prometidos: 0, secoesExclusivas: 0 }
-      : { mode: 'default', prometidos: 0, entregue: 0, faltante: 0, prometidosSemApuracao: 0, cobertura: 0 };
+      : { mode: 'default', prometidos: 0, entregue: 0, faltante: 0, quebra: 0 };
   }
 
   const ranking = report.cabos || [];
@@ -228,10 +221,6 @@ function bairrosOfSubcabo(subcabo, city) {
 
 function formatSharedSectionSummary(section) {
   const n = count(section.prometidos);
-  const hasTse = section.apuracaoDisponivel !== false && section.apuradoTseNaSecao !== null && section.apuradoTseNaSecao !== undefined;
-  if (!hasTse) {
-    return `Prometeu ${n} · Sem apuração TSE`;
-  }
   const t = Number(section.apuradoTseNaSecao) || 0;
   const situacao = t >= 1 ? 'Apurado' : 'Não apurado';
   return `Prometeu ${n} · Votos apurados na seção: ${count(t)} · ${situacao}`;
@@ -342,7 +331,6 @@ export default function Crossing() {
       (fromCurrent.prometidos > 0 ||
         fromCurrent.entregue > 0 ||
         fromCurrent.faltante > 0 ||
-        fromCurrent.prometidosSemApuracao > 0 ||
         fromCurrent.secoesExclusivas > 0 ||
         !baseReport)
     ) {
@@ -404,13 +392,9 @@ export default function Crossing() {
                       <strong data-testid="filter-total-faltantes">{count(totals.faltante)}</strong>
                       <span>Faltantes</span>
                     </div>
-                    <div className="election-metric-small">
-                      <strong data-testid="filter-total-sem-apuracao">{count(totals.prometidosSemApuracao)}</strong>
-                      <span>Sem apuração TSE</span>
-                    </div>
                     <div>
-                      <strong data-testid="filter-total-cobertura">{formatCoverage(totals.cobertura)}</strong>
-                      <span>Cobertura</span>
+                      <strong data-testid="filter-total-quebra">{formatQuebra(totals.quebra)}</strong>
+                      <span>% de quebra</span>
                     </div>
                   </>
                 )}
@@ -482,7 +466,7 @@ export default function Crossing() {
                       <h4>
                         Cabo: {cabo.name}{' '}
                         <span>
-                          {count(cabo.prometidos)} prometidos · {count(cabo.entregue)} entregue · {count(cabo.faltante)} faltante · {formatCoverage(cabo.cobertura)} cobertura
+                          {count(cabo.prometidos)} prometidos · {count(cabo.entregue)} entregue · {count(cabo.faltante)} faltante · {formatQuebra(cabo.quebra)} de quebra
                         </span>
                       </h4>
                       <p>{count(cabo.secoes)} seções · {count(cabo.secoesComFaltantes)} com diferença numérica</p>
