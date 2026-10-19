@@ -400,6 +400,22 @@ export default function Crossing() {
                 )}
               </div>
             )}
+            {/* Todos os PDFs juntos, antes das listas longas, para nao exigir rolagem. */}
+            <div className="election-download-actions" role="group" aria-label="Baixar PDFs">
+              <button className="election-download" type="button" onClick={() => download('eleitores')}>Baixar PDF de possíveis não votantes</button>
+              <button className="election-download" type="button" onClick={() => download('relatorio-geral')}>
+                Baixar relatório geral
+              </button>
+              <button className="election-download secondary" type="button" disabled={!filters.caboId} onClick={() => download('relatorio-cabo')}>
+                Baixar relatório por cabo
+              </button>
+              <button className="election-download secondary" type="button" disabled={!filters.subcaboId} onClick={() => download('relatorio-subcabo')}>
+                Baixar relatório por subcabo
+              </button>
+              <button className="election-download secondary" type="button" onClick={() => download('voto-unico')}>
+                Baixar relatório de seções com um voto
+              </button>
+            </div>
             {error && <div className="alert error">{error}</div>}
             {loading ? <div className="empty">Carregando relatórios...</div> : report && (
               <div className="election-report-stack">
@@ -409,7 +425,6 @@ export default function Crossing() {
                       <h3 id="missing-title">Possíveis pessoas não votantes</h3>
                       <p>Promessas acima dos votos oficiais da seção.</p>
                     </div>
-                    <button className="election-download" type="button" onClick={() => download('eleitores')}>Baixar PDF de possíveis não votantes</button>
                   </div>
                   <p className="election-explanation">Os nomes apontam possibilidades para acompanhamento; não confirmam o voto individual.</p>
                   {!missing.length ? <div className="empty">Nenhuma seção com diferença numérica para os filtros.</div> : missing.map((section) => (
@@ -445,20 +460,6 @@ export default function Crossing() {
                             : 'Selecione um subcabo nos filtros para habilitar o relatório por subcabo.'}
                         </p>
                       )}
-                    </div>
-                    <div className="election-download-actions">
-                      <button className="election-download" type="button" onClick={() => download('relatorio-geral')}>
-                        Baixar relatório geral
-                      </button>
-                      <button className="election-download secondary" type="button" disabled={!filters.caboId} onClick={() => download('relatorio-cabo')}>
-                        Baixar relatório por cabo
-                      </button>
-                      <button className="election-download secondary" type="button" disabled={!filters.subcaboId} onClick={() => download('relatorio-subcabo')}>
-                        Baixar relatório por subcabo
-                      </button>
-                      <button className="election-download secondary" type="button" onClick={() => download('voto-unico')}>
-                        Baixar relatório de seções com um voto
-                      </button>
                     </div>
                   </div>
                   {!ranking.length ? <div className="empty">Nenhum cadastro para os filtros.</div> : ranking.map((cabo) => (

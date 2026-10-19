@@ -50,7 +50,8 @@
 
 .election-download.secondary { background: var(--success); }
 .election-download:disabled { opacity: 0.5; cursor: not-allowed; }
-.election-download-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.election-download-actions { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.election-download-actions .election-download { width: 100%; text-align: left; }
 .election-clear { align-self: end; background: var(--secondary); color: #fff; }
 
 .election-reports button:focus-visible,
